@@ -1,0 +1,3032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FireSafe Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Firebase compat SDK (synchronous, no module issues) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── Firebase init (runs synchronously in <head>) ─────
+const firebaseConfig = {
+  apiKey: "AIzaSyA79q3Ij_sdTQQDTXIJ3O-JEyhQzFQKKac",
+  authDomain: "fire-56f87.firebaseapp.com",
+  projectId: "fire-56f87",
+  storageBucket: "fire-56f87.firebasestorage.app",
+  messagingSenderId: "190041511352",
+  appId: "1:190041511352:web:27aeb0282b06a203506b4d"
+};
+firebase.initializeApp(firebaseConfig);
+const _db = firebase.firestore();
+
+// Expose uniform API used by rest of code
+window._fb = {
+  db: _db,
+  doc:        (db, ...path) => db.doc(path.join('/')),
+  getDoc:     (ref)         => ref.get(),
+  setDoc:     (ref, data)   => ref.set(data, {merge:true}),
+  deleteDoc:  (ref)         => ref.delete(),
+  onSnapshot: (ref, cb)     => ref.onSnapshot(cb),
+  collection: (db, path)    => db.collection(path),
+};
+window._fbReady = true;
+</script>
+<style>
+:root{
+  --bg:#f1f5f9;--surface:#ffffff;--surface2:#f8fafc;--border:#e2e8f0;
+  --text:#0f172a;--muted:#64748b;--dim:#475569;
+  --red:#e53e1e;--green:#16a34a;--amber:#d97706;--danger:#dc2626;--blue:#2563eb;
+  --red-light:#fff5f2;--green-light:#f0fdf4;--blue-light:#eff6ff;--amber-light:#fffbeb;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 16px rgba(0,0,0,.1);
+  --font-head:'Rajdhani',sans-serif;--font-body:'DM Sans',sans-serif;
+  --fz:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:var(--fz)}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;font-size:1rem}
+button{cursor:pointer;font-family:var(--font-body);font-size:.9rem}
+input,select,textarea{font-family:var(--font-body);font-size:.9rem}
+input::placeholder,textarea::placeholder{color:#cbd5e1}
+select option{background:#fff;color:#0f172a}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+
+/* ── SIDEBAR ── */
+#sidebar{width:238px;min-width:238px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;box-shadow:2px 0 8px rgba(0,0,0,.04)}
+.logo{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.logo h1{font-family:var(--font-head);font-size:22px;font-weight:700;letter-spacing:.5px;color:var(--text)}
+.logo h1 span{color:var(--red)}
+.logo p{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500}
+nav{flex:1;padding:10px 8px;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:10px 12px 4px}
+.nav-btn{width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-size:.82rem;font-weight:600;margin-bottom:2px;transition:all .15s;text-align:left}
+.nav-btn:hover{background:var(--bg);color:var(--text)}
+.nav-btn.active{background:var(--red-light);color:var(--red)}
+.nav-btn .icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.session-pill{background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:20px;margin-left:auto;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.session-indicator{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin:0 8px 8px;display:none}
+.session-indicator.show{display:block}
+.si-label{font-size:10px;color:#d97706;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.si-type{font-size:13px;font-weight:800;color:#92400e}
+.si-prog{font-size:11px;color:#d97706;margin-top:2px}
+.sidebar-stat{background:var(--bg);border-radius:8px;padding:11px 13px;margin:0 8px 8px}
+.sidebar-stat .slabel{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.sidebar-stat .sval{font-size:.9rem;font-weight:800;color:var(--text)}
+.progress-bar{background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px}
+.progress-fill{height:5px;border-radius:4px;background:linear-gradient(90deg,#16a34a,#4ade80);transition:width .4s}
+.user-chip{display:flex;align-items:center;gap:9px;padding:9px 12px;margin:4px 8px 8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.uc-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.uc-name{font-size:.78rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uc-role{font-size:.68rem;color:var(--muted);margin-top:1px}
+.uc-logout{margin-left:auto;background:transparent;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:2px 4px;flex-shrink:0;transition:color .15s;line-height:1}
+.uc-logout:hover{color:var(--red)}
+
+/* ── MAIN ── */
+#main{margin-left:238px;flex:1;padding:26px 28px;min-height:100vh;background:var(--bg)}
+.page{display:none}.page.active{display:block}
+.page-header{margin-bottom:20px}
+.page-header h2{font-family:var(--font-head);font-size:1.7rem;font-weight:700;letter-spacing:.3px;color:var(--text)}
+.page-header p{color:var(--muted);font-size:.82rem;margin-top:3px}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+.card-pad{padding:20px}
+
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:18px}
+.stat-card{padding:16px 18px}
+.stat-card .s-icon{font-size:20px;margin-bottom:7px}
+.stat-card .s-num{font-family:var(--font-head);font-size:2rem;font-weight:700}
+.stat-card .s-lbl{font-size:.75rem;color:var(--muted);font-weight:600;margin-top:2px}
+
+/* ── CHART ── */
+.chart-bar-wrap{display:flex;align-items:flex-end;gap:6px;height:120px;padding:0 4px}
+.chart-bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.chart-bar{width:100%;border-radius:5px 5px 0 0;min-height:4px;transition:height .3s}
+.chart-label{font-size:9px;color:var(--muted);white-space:nowrap;transform:rotate(-35deg);margin-top:4px}
+.chart-val{font-size:9px;font-weight:700;color:var(--dim)}
+.donut-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+.donut-center{position:absolute;text-align:center;pointer-events:none}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 13px;text-align:left;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:#fafafa}
+td{padding:10px 13px;font-size:.82rem;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+
+/* ── TAGS ── */
+.tag{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 9px;border-radius:20px}
+.tag-ok{background:#dcfce7;color:#15803d}
+.tag-soon{background:#fef9c3;color:#a16207}
+.tag-over{background:#fee2e2;color:#dc2626}
+.tag-pass{background:#dcfce7;color:#15803d}
+.tag-fail{background:#fee2e2;color:#dc2626}
+.tag-skip{background:#e0e7ff;color:#4338ca}
+
+/* ── BUTTONS ── */
+.btn{border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:.82rem;transition:all .15s}
+.btn:hover{opacity:.88}
+.btn-red{background:var(--red);color:#fff}
+.btn-ghost{background:var(--surface2);color:var(--dim);border:1px solid var(--border)}
+.btn-blue{background:var(--blue-light);color:var(--blue);border:1px solid #bfdbfe}
+.btn-green{background:var(--green-light);color:var(--green);border:1px solid #bbf7d0}
+.btn-amber{background:var(--amber-light);color:#92400e;border:1px solid #fcd34d}
+.btn-danger{background:#fff5f5;color:#dc2626;border:1px solid #fecaca}
+.btn-sm{padding:5px 11px;font-size:.75rem}
+.btn-full{width:100%;padding:12px;font-size:.88rem;border-radius:10px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filters input,.filters select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:.82rem;flex:1;min-width:160px;outline:none;box-shadow:var(--shadow)}
+.filters input:focus,.filters select:focus{border-color:var(--blue)}
+.filter-btn{border:1px solid var(--border);border-radius:8px;padding:7px 13px;background:var(--surface);color:var(--muted);font-size:.75rem;font-weight:700;transition:all .15s}
+.filter-btn.active{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* ── FORM ── */
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:.7rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.form-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.82rem;width:100%;outline:none;transition:border .2s;box-shadow:var(--shadow)}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.form-grid{display:grid;gap:11px}
+
+/* ── STEP WIZARD ── */
+.step-bar{display:flex;align-items:center;margin-bottom:22px;flex-wrap:nowrap;overflow-x:auto}
+.step-item{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.step-num{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-num.done{background:var(--green);color:#fff}
+.step-num.active{background:var(--red);color:#fff}
+.step-num.pending{background:#e2e8f0;color:var(--muted)}
+.step-label{font-size:.75rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.step-label.active{color:var(--red)}
+.step-label.done{color:var(--green)}
+.step-line{flex:1;min-width:20px;height:2px;background:#e2e8f0;margin:0 8px}
+.step-line.done{background:var(--green)}
+
+/* ── TYPE SELECTOR ── */
+.type-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.type-card{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;box-shadow:var(--shadow)}
+.type-card:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.type-card.selected{border-color:var(--red);background:var(--red-light)}
+.type-card .tc-icon{font-size:40px;margin-bottom:10px;display:block}
+.type-card .tc-name{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.type-card .tc-count{font-size:.75rem;color:var(--muted)}
+.type-card .tc-badge{position:absolute;top:10px;right:10px;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px}
+.type-card .tc-mark{position:absolute;top:10px;left:10px;font-size:16px;display:none}
+.type-card.selected .tc-mark{display:block}
+
+/* ── ASSET PICKER ── */
+.asset-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:18px;max-height:420px;overflow-y:auto;padding:2px}
+.ap-card{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:13px;cursor:pointer;transition:all .15s;position:relative}
+.ap-card:hover{border-color:var(--red);box-shadow:var(--shadow-md)}
+.ap-card.selected{border-color:var(--green);background:var(--green-light)}
+.ap-card .ap-id{font-size:.82rem;font-weight:800}
+.ap-card .ap-loc{font-size:.7rem;color:var(--muted);margin-top:3px}
+.ap-card .ap-check{position:absolute;top:9px;right:9px;font-size:15px;display:none}
+.ap-card.selected .ap-check{display:block}
+
+/* ── INSPECTOR SETUP ── */
+.inspector-setup{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:18px}
+.inspector-setup .is-title{font-size:.72rem;font-weight:800;color:var(--blue);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── ASSET RAIL ── */
+.asset-rail{display:flex;gap:6px;flex-wrap:wrap;padding:12px;background:var(--bg);border-radius:8px;margin-bottom:4px}
+.rail-dot{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;position:relative;flex-shrink:0;transition:all .2s;background:#fff;color:var(--muted)}
+.rail-dot.r-pass{background:#dcfce7;border-color:#16a34a;color:#15803d}
+.rail-dot.r-fail{background:#fee2e2;border-color:#dc2626;color:#dc2626}
+.rail-dot.r-skip{background:#e0e7ff;border-color:#6366f1;color:#4338ca}
+.rail-dot.r-cur{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 0 4px rgba(229,62,30,.2)}
+.rail-dot .dot-tip{position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:var(--text);color:#fff;border-radius:4px;padding:3px 7px;font-size:9px;white-space:nowrap;display:none;z-index:10}
+.rail-dot:hover .dot-tip{display:block}
+
+/* ── INSP CARD ── */
+.insp-card-head{display:flex;align-items:center;gap:13px;padding:15px 18px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-bottom:1px solid var(--border);border-radius:12px 12px 0 0}
+.insp-card-body{padding:18px}
+.insp-locked{display:flex;align-items:center;gap:11px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:9px 13px;margin-bottom:14px}
+.il-name{font-size:.82rem;font-weight:800;color:#15803d}
+
+/* ── CHECKLIST ── */
+.cl-item{display:flex;justify-content:space-between;align-items:center;padding:10px 13px;border-radius:8px;margin-bottom:5px;border:1px solid var(--border);background:var(--surface);transition:all .2s}
+.cl-item.s-ok{background:#f0fdf4;border-color:#bbf7d0}
+.cl-item.s-fail{background:#fff5f5;border-color:#fecaca}
+.cl-left{display:flex;align-items:center;gap:9px}
+.cl-num{font-size:.7rem;font-weight:800;color:var(--muted);width:20px;text-align:center;flex-shrink:0}
+.cl-text{font-size:.82rem;color:var(--dim)}
+.cl-btns{display:flex;gap:5px;flex-shrink:0}
+.cl-btn{border:1px solid var(--border);border-radius:6px;padding:4px 11px;font-size:.72rem;font-weight:700;background:var(--surface);color:var(--muted);transition:all .15s}
+.cl-btn:hover{border-color:var(--text);color:var(--text)}
+.cl-btn.ok-sel{background:#dcfce7;border-color:#16a34a;color:#15803d}
+.cl-btn.fail-sel{background:#fee2e2;border-color:#dc2626;color:#dc2626}
+
+/* ── PROGRESS ── */
+.prog-wrap{margin:10px 0 14px}
+.prog-label{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px}
+.prog-track{background:#e2e8f0;border-radius:6px;height:6px}
+.prog-fill{height:6px;border-radius:6px;background:linear-gradient(90deg,var(--red),#f97316);transition:width .3s}
+
+/* ── SUMMARY ── */
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:18px}
+.summary-stat{padding:16px;border-radius:10px;text-align:center;border:1px solid var(--border)}
+.summary-stat .ss-num{font-family:var(--font-head);font-size:2rem;font-weight:700}
+.summary-stat .ss-lbl{font-size:.75rem;font-weight:600;margin-top:3px}
+.sess-row{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:8px;margin-bottom:5px;background:var(--surface);border:1px solid var(--border)}
+.sess-row.s-pass{border-color:#bbf7d0;background:#f0fdf4}
+.sess-row.s-fail{border-color:#fecaca;background:#fff5f5}
+.sess-row.s-skip{border-color:#c7d2fe;background:#eef2ff}
+
+/* ── BLOCKED ── */
+.blocked-box{background:#fffbeb;border:2px solid #fcd34d;border-radius:14px;padding:30px;text-align:center;margin-bottom:20px;display:none}
+.blocked-box.show{display:block}
+.blocked-box .bb-icon{font-size:44px;margin-bottom:10px}
+.blocked-box h3{font-family:var(--font-head);font-size:1.3rem;font-weight:700;color:#92400e;margin-bottom:7px}
+.blocked-box p{font-size:.82rem;color:var(--dim);margin-bottom:18px;line-height:1.6}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:520px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal h3{font-family:var(--font-head);font-size:1.2rem;font-weight:700;margin-bottom:16px;color:var(--text)}
+.qr-modal{width:360px;text-align:center}
+.qr-wrap{display:flex;justify-content:center;margin:12px 0}
+.qr-label{background:var(--bg);border-radius:8px;padding:9px 11px;text-align:center;border:1px solid var(--border)}
+.qr-label .ql-id{font-family:monospace;font-size:.85rem;font-weight:800;color:var(--text)}
+.qr-label .ql-type{font-size:.7rem;color:var(--dim);margin-top:2px;font-weight:600}
+.qr-label .ql-loc{font-size:.7rem;color:var(--muted);margin-top:1px}
+
+/* ── BULK QR ── */
+.bulk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px;margin-top:16px}
+.bulk-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:13px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.bulk-card:hover{box-shadow:var(--shadow-md)}
+.bulk-card .bc-qr{background:#fff;border-radius:6px;padding:7px;border:1px solid var(--border)}
+.bulk-card .bc-id{font-family:monospace;font-size:.75rem;font-weight:800;color:var(--text)}
+.bulk-card .bc-type{font-size:.7rem;color:var(--muted)}
+.bulk-card .bc-loc{font-size:.7rem;color:var(--dim);text-align:center;line-height:1.3}
+.bulk-sel{border-color:var(--red)!important;background:var(--red-light)!important}
+
+/* ── URL BANNER ── */
+.url-config-banner{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 15px;margin-bottom:16px;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.url-config-banner .ucb-label{font-size:.75rem;font-weight:700;color:var(--blue);flex-shrink:0}
+.url-config-banner input{flex:1;min-width:200px;background:#fff;border:1px solid #bfdbfe;border-radius:7px;padding:6px 10px;color:var(--text);font-size:.72rem;outline:none;font-family:monospace}
+
+/* ── TOAST ── */
+#toast{position:fixed;top:16px;right:16px;z-index:9999;padding:9px 16px;border-radius:9px;font-weight:700;font-size:.82rem;box-shadow:var(--shadow-md);transform:translateY(-60px);opacity:0;transition:all .3s;pointer-events:none;border:1px solid;max-width:320px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+#toast.err{background:#fff5f5;color:#dc2626;border-color:#fecaca}
+#toast.warn{background:#fffbeb;color:#92400e;border-color:#fcd34d}
+
+/* ── DETAIL ── */
+.detail-header{display:flex;align-items:center;gap:13px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.detail-rows .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.detail-rows .row:last-child{border:none}
+.detail-rows .row .k{font-size:.82rem;color:var(--muted)}
+.detail-rows .row .v{font-size:.82rem;font-weight:700;color:var(--text)}
+.ins-card{padding:11px 13px;background:var(--bg);border-radius:8px;margin-bottom:7px;border:1px solid var(--border)}
+.ins-card .top{display:flex;justify-content:space-between;margin-bottom:4px}
+
+/* ── ALERT ── */
+.alert-box{background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:16px;margin-top:16px}
+.alert-box h3{color:#dc2626;font-size:.82rem;font-weight:800;margin-bottom:10px}
+.alert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
+.alert-item{background:#fff;border-radius:8px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;border:1px solid #fecaca}
+
+/* ── REPORTS ── */
+.rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px}
+.rep-card{padding:18px}
+.rep-icon{font-size:26px;margin-bottom:7px}
+.rep-card h3{font-size:.82rem;font-weight:800;margin-bottom:3px}
+.rep-card p{font-size:.75rem;color:var(--muted);line-height:1.6;margin-bottom:12px}
+
+/* ── AUDIT TAGS ── */
+.audit-tag{display:inline-block;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:10px}
+.at-login{background:#dbeafe;color:#1d4ed8}
+.at-logout{background:#fef9c3;color:#a16207}
+.at-add{background:#dcfce7;color:#15803d}
+.at-edit{background:#ede9fe;color:#6d28d9}
+.at-insp{background:#fee2e2;color:#dc2626}
+.at-admin{background:#fce7f3;color:#be185d}
+.at-maint{background:#fef3c7;color:#92400e}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;z-index:9000;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#login-screen.hidden{display:none}
+.login-box{background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 40px;width:400px;max-width:96vw;animation:fadeIn .35s ease;box-shadow:var(--shadow-md)}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo h1{font-family:var(--font-head);font-size:28px;font-weight:700;letter-spacing:.5px;color:var(--text)}
+.login-logo h1 span{color:var(--red)}
+.login-logo p{font-size:.72rem;color:var(--muted);margin-top:3px}
+.login-err{background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 13px;font-size:.75rem;color:#dc2626;margin-bottom:12px;display:none}
+.login-err.show{display:block}
+.login-succ{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:9px 13px;font-size:.75rem;color:#15803d;margin-bottom:12px;display:none}
+.login-succ.show{display:block}
+
+/* ── QR PUBLIC VIEW ── */
+#qr-public-view{position:fixed;inset:0;z-index:8999;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto}
+#qr-public-view.show{display:flex}
+.qpv-box{background:#fff;border-radius:20px;padding:26px;max-width:460px;width:100%;box-shadow:var(--shadow-md);border:1px solid var(--border)}
+.qpv-header{text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.qpv-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.qpv-row:last-child{border:none}
+.qpv-row .k{font-size:.82rem;color:var(--muted)}
+.qpv-row .v{font-size:.82rem;font-weight:700}
+.qpv-insp{background:var(--bg);border-radius:8px;padding:9px 13px;margin-bottom:5px;border:1px solid var(--border)}
+
+/* ── SETTINGS ── */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.settings-section h3{font-family:var(--font-head);font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--text);padding-bottom:10px;border-bottom:1px solid var(--border)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border:none}
+.toggle-label{font-size:.82rem;color:var(--text)}
+.toggle-desc{font-size:.72rem;color:var(--muted);margin-top:2px}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;border-radius:24px;background:#e2e8f0;cursor:pointer;transition:.3s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;left:3px;top:3px;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked + .toggle-slider{background:var(--green)}
+.toggle input:checked + .toggle-slider:before{transform:translateX(18px)}
+
+/* ── USER MANAGEMENT ── */
+.um-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;background:var(--surface);box-shadow:var(--shadow)}
+.um-head{display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid var(--border);background:#fafafa}
+.um-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0}
+.um-name{font-size:.88rem;font-weight:700;color:var(--text)}
+.um-user{font-size:.72rem;color:var(--muted);margin-top:1px}
+.um-body{padding:13px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.perm-toggle{display:flex;align-items:center;gap:7px;background:var(--bg);border-radius:7px;padding:7px 10px;border:1px solid var(--border)}
+.perm-toggle label{font-size:.72rem;font-weight:600;color:var(--dim);cursor:pointer;user-select:none}
+.perm-toggle input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--green)}
+
+/* ── FONT SIZE CONTROL (inside sidebar) ── */
+.sidebar-fz{margin:0 8px 8px;background:var(--bg);border-radius:8px;border:1px solid var(--border);padding:9px 12px}
+.sidebar-fz .sfz-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.sidebar-fz .sfz-row{display:flex;align-items:center;gap:6px}
+.sfz-btn{flex:1;height:26px;border-radius:6px;border:1px solid var(--border);background:#fff;font-weight:800;font-size:.75rem;cursor:pointer;transition:all .15s;color:var(--text)}
+.sfz-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
+.sfz-current{font-size:.8rem;font-weight:800;color:var(--text);width:32px;text-align:center;flex-shrink:0}
+
+/* ── MAINTENANCE LOG ── */
+.maint-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:8px;box-shadow:var(--shadow)}
+.maint-card .mc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.maint-card .mc-type{font-size:.72rem;font-weight:800;padding:2px 9px;border-radius:20px;background:var(--blue-light);color:var(--blue);border:1px solid #bfdbfe}
+.maint-card .mc-date{font-size:.72rem;color:var(--muted)}
+.maint-card .mc-desc{font-size:.82rem;color:var(--dim);line-height:1.5}
+.maint-card .mc-by{font-size:.7rem;color:var(--muted);margin-top:4px}
+
+/* ── NOTIFICATION BADGE ── */
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:800;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1}
+
+/* ── MISC ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── NEW INSPECTION WORKSPACE ── */
+.setup-asset-card{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:12px 13px;cursor:pointer;transition:all .15s;position:relative;display:flex;flex-direction:column;gap:5px}
+.setup-asset-card:hover{border-color:var(--red);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.setup-asset-card.selected{border-color:var(--green);background:var(--green-light)}
+.setup-asset-card .sac-check{position:absolute;top:8px;right:8px;font-size:14px;opacity:0;transition:opacity .15s}
+.setup-asset-card.selected .sac-check{opacity:1}
+.setup-asset-card .sac-type{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.setup-asset-card .sac-id{font-size:.9rem;font-weight:800;color:var(--text)}
+.setup-asset-card .sac-loc{font-size:.72rem;color:var(--dim);line-height:1.4}
+.setup-preview-pill{display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:5px}
+.spp-icon{font-size:14px;flex-shrink:0}
+.spp-text{flex:1;min-width:0}<br>.spp-text .st-id{font-size:.78rem;font-weight:800}
+.spp-text .st-loc{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spp-remove{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;flex-shrink:0;padding:1px 3px;line-height:1}
+.spp-remove:hover{color:var(--red)}
+
+/* Queue list */
+.queue-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative}
+.queue-item:hover{background:var(--bg)}
+.queue-item.qi-active{background:var(--red-light);border-left:3px solid var(--red)}
+.queue-item.qi-done-pass{background:#f0fdf4;border-left:3px solid #16a34a}
+.queue-item.qi-done-fail{background:#fff5f5;border-left:3px solid #dc2626}
+.queue-item.qi-done-skip{background:#eef2ff;border-left:3px solid #6366f1}
+.queue-item.qi-pending{border-left:3px solid transparent}
+.qi-icon{font-size:18px;flex-shrink:0}
+.qi-info{flex:1;min-width:0}
+.qi-info .qi-id{font-size:.82rem;font-weight:800;color:var(--text)}
+.qi-info .qi-loc{font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qi-status{font-size:16px;flex-shrink:0}
+
+/* Active checklist */
+.cl-item-v2{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:9px;margin-bottom:6px;border:1.5px solid var(--border);background:var(--surface);transition:all .2s}
+.cl-item-v2.s-ok{background:#f0fdf4;border-color:#86efac}
+.cl-item-v2.s-fail{background:#fff5f5;border-color:#fca5a5}
+.cl-num-v2{font-size:.68rem;font-weight:800;color:var(--muted);width:22px;text-align:center;flex-shrink:0;background:var(--bg);border-radius:50%;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
+.cl-num-v2.cn-ok{background:#dcfce7;border-color:#86efac;color:#15803d}
+.cl-num-v2.cn-fail{background:#fee2e2;border-color:#fca5a5;color:#dc2626}
+.cl-text-v2{font-size:.82rem;color:var(--dim);flex:1}
+.cl-actions{display:flex;gap:5px;flex-shrink:0}
+.cl-ok-btn,.cl-fail-btn{border:none;border-radius:7px;padding:5px 13px;font-size:.75rem;font-weight:800;cursor:pointer;transition:all .15s}
+.cl-ok-btn{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac}
+.cl-ok-btn:hover,.cl-ok-btn.active{background:#16a34a;color:#fff;border-color:#16a34a}
+.cl-fail-btn{background:#fff5f5;color:#dc2626;border:1.5px solid #fca5a5}
+.cl-fail-btn:hover,.cl-fail-btn.active{background:#dc2626;color:#fff;border-color:#dc2626}
+.all-ok-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--green-light);color:var(--green);border:1.5px solid #86efac;border-radius:8px;font-weight:800;font-size:.78rem;cursor:pointer;transition:all .15s;margin-bottom:12px}
+.all-ok-btn:hover{background:#16a34a;color:#fff;border-color:#16a34a}
+
+/* Completion state */
+.checklist-done-banner{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:10px;padding:14px 18px;text-align:center;margin-bottom:14px}
+.checklist-fail-banner{background:linear-gradient(135deg,#fff5f5,#fee2e2);border:1.5px solid #fca5a5;border-radius:10px;padding:14px 18px;text-align:center;margin-bottom:14px}
+
+/* ── PLANT MAP ── */
+.pin-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid var(--border);margin-bottom:5px;background:var(--surface);cursor:pointer;transition:all .15s}
+.pin-item:hover{border-color:var(--red);background:var(--red-light)}
+.pin-item.pin-selected{border-color:var(--blue);background:var(--blue-light)}
+.pin-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pin-info{flex:1;min-width:0}
+.pin-info .pi-id{font-size:.78rem;font-weight:800;color:var(--text)}
+.pin-info .pi-loc{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coverage-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.coverage-row .cr-label{font-size:.78rem;color:var(--dim)}
+.coverage-row .cr-val{font-size:.82rem;font-weight:800}
+
+@media print{#sidebar,#login-screen,#qr-public-view,.btn,.filters,.url-config-banner,.modal-overlay{display:none!important}#main{margin-left:0!important;padding:0!important}.bulk-grid{grid-template-columns:repeat(4,1fr)!important}}
+@media(max-width:768px){
+  #sidebar{width:56px;min-width:56px}
+  .logo p,.nav-btn span:not(.icon),.sidebar-stat,.session-indicator,.uc-name,.uc-role,.nav-section{display:none}
+  .logo h1{font-size:14px}#main{margin-left:56px;padding:13px}
+  .stat-grid,.two-col,.form-row,.rep-grid,.type-selector,.summary-grid,.three-col{grid-template-columns:1fr}
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(13px)}to{opacity:1;transform:translateX(0)}}
+@keyframes dot1{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.ani{animation:slideIn .22s ease forwards}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+
+
+<!-- ═══ QR PUBLIC VIEW ═══ -->
+<div id="qr-public-view">
+  <div class="qpv-box">
+    <div style="text-align:center;margin-bottom:8px;font-size:.72rem;color:var(--muted)">🔥 <span id="qpv-company">FireSafe Portal</span></div>
+    <div class="qpv-header">
+      <div style="font-size:44px;margin-bottom:7px" id="qpv-icon">🧯</div>
+      <h2 style="font-family:var(--font-head);font-size:1.4rem;font-weight:700;color:var(--text)" id="qpv-title">Asset</h2>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:3px" id="qpv-sub"></div>
+    </div>
+    <div id="qpv-rows"></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:.72rem;font-weight:700;color:var(--dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Recent Inspections</div>
+      <div id="qpv-inspections"></div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-red btn-full" onclick="showLoginFromPublic()">🔐 Sign In to Portal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>🔥 <span id="login-title-brand">Fire</span><span id="login-title-safe">Safe</span></h1>
+      <p id="login-company-sub">Safety Equipment Management Portal</p>
+    </div>
+    <!-- Login panel -->
+    <div id="login-panel">
+      <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:3px">Sign In</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:14px">Enter your credentials to access the portal</div>
+      <div class="login-err" id="login-err">Incorrect username or password.</div>
+      <div class="form-grid" style="gap:10px;margin-bottom:14px">
+        <div class="form-group"><label>Username</label><input class="form-input" id="login-user" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+        <div class="form-group"><label>Password</label><input class="form-input" type="password" id="login-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      </div>
+      <button class="btn btn-red btn-full" onclick="doLogin()">Sign In →</button>
+      <div style="text-align:center;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="showForgotPanel()" style="font-size:.72rem">Forgot / Reset Password</button>
+      </div>
+    </div>
+    <!-- Reset password panel -->
+    <div id="reset-panel" style="display:none">
+      <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:3px">Reset Password</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:14px">Admin credentials required to reset any user's password</div>
+      <div class="login-err" id="reset-err"></div>
+      <div class="login-succ" id="reset-succ"></div>
+      <div class="form-grid" style="gap:9px;margin-bottom:14px">
+        <div class="form-group"><label>Admin Username</label><input class="form-input" id="ra-user" placeholder="admin username"/></div>
+        <div class="form-group"><label>Admin Password</label><input class="form-input" type="password" id="ra-pass" placeholder="admin password"/></div>
+        <div class="form-group"><label>User to Reset</label><select class="form-input" id="rt-user"><option value="">— Select user —</option></select></div>
+        <div class="form-group"><label>New Password</label><input class="form-input" type="password" id="rn-pass" placeholder="min 6 characters"/></div>
+        <div class="form-group"><label>Confirm Password</label><input class="form-input" type="password" id="rc-pass" placeholder="repeat new password"/></div>
+      </div>
+      <div style="display:flex;gap:9px">
+        <button class="btn btn-ghost" style="flex:1" onclick="showLoginPanel()">← Back</button>
+        <button class="btn btn-red" style="flex:1" onclick="doResetPassword()">Reset Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SIDEBAR ═══ -->
+<div id="sidebar" style="display:none">
+  <div class="logo">
+    <h1>🔥 <span id="sb-brand-name">FireSafe</span></h1>
+    <p id="sb-company-name">Safety Equipment Portal</p>
+  </div>
+  <div class="user-chip" id="user-chip">
+    <div class="uc-avatar" id="uc-avatar">?</div>
+    <div style="min-width:0;flex:1"><div class="uc-name" id="uc-name">—</div><div class="uc-role" id="uc-role">—</div></div>
+    <button class="uc-logout" title="Sign out" onclick="doLogout()">⏏</button>
+  </div>
+  <nav id="main-nav">
+    <div class="nav-section">Main</div>
+    <button class="nav-btn" data-page="dashboard"><span class="icon">📊</span><span>Dashboard</span></button>
+    <button class="nav-btn" data-page="assets" data-perm="assets"><span class="icon">🗂️</span><span>Asset Registry</span></button>
+    <button class="nav-btn" data-page="inspections" data-perm="inspections"><span class="icon">✅</span><span>Inspections</span><span class="session-pill" id="sess-pill" style="display:none">LIVE</span></button>
+    <button class="nav-btn" data-page="log" data-perm="log"><span class="icon">📒</span><span>Inspection Log</span></button>
+    <button class="nav-btn" data-page="maintenance" data-perm="maintenance"><span class="icon">🔧</span><span>Maintenance</span></button>
+
+    <div class="nav-section" id="nav-section-admin" style="display:none">Admin</div>
+    <button class="nav-btn" data-page="qrcodes" data-perm="qrcodes"><span class="icon">🔲</span><span>QR Codes</span></button>
+    <button class="nav-btn" data-page="reports" data-perm="reports"><span class="icon">📋</span><span>Reports</span></button>
+    <button class="nav-btn" data-page="auditlog" data-perm="auditlog"><span class="icon">🔍</span><span>Audit Log</span></button>
+    <button class="nav-btn" data-page="usermgmt" data-perm="usermgmt"><span class="icon">👥</span><span>Users & Roles</span></button>
+    <button class="nav-btn" data-page="settings" data-perm="settings"><span class="icon">⚙️</span><span>Settings</span></button>
+  </nav>
+  <div class="session-indicator" id="session-indicator">
+    <div class="si-label">🔴 Session Active</div>
+    <div class="si-type" id="si-type-name">—</div>
+    <div class="si-prog" id="si-progress-sb">0 of 0 done</div>
+  </div>
+  <div class="sidebar-fz" id="sidebar-fz">
+    <div class="sfz-label">🔤 Font Size</div>
+    <div class="sfz-row">
+      <button class="sfz-btn" onclick="changeFZ(-1)" title="Smaller">A−</button>
+      <span class="sfz-current" id="fz-current">14px</span>
+      <button class="sfz-btn" onclick="changeFZ(1)" title="Larger">A+</button>
+      <button class="sfz-btn" onclick="resetFZ()" title="Reset" style="flex:none;width:28px">↺</button>
+    </div>
+  </div>
+  <div class="sidebar-stat">
+    <div class="slabel">Compliance</div>
+    <div class="sval" id="sb-pct">—%</div>
+    <div class="progress-bar"><div class="progress-fill" id="sb-bar" style="width:0%"></div></div>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main" style="display:none">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header"><h2>Dashboard</h2><p id="dash-greeting">Welcome</p></div>
+  <div class="stat-grid" id="stat-grid"></div>
+  <div class="two-col">
+    <div class="card card-pad">
+      <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        Asset Status <span style="font-size:.72rem;font-weight:400;color:var(--muted)">by type</span>
+      </div>
+      <div id="breakdown"></div>
+    </div>
+    <div class="card card-pad">
+      <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700;margin-bottom:14px">Monthly Inspections</div>
+      <div id="monthly-chart"></div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card card-pad">
+      <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700;margin-bottom:14px">Pass / Fail Breakdown</div>
+      <div id="pf-chart" style="display:flex;align-items:center;gap:20px"></div>
+    </div>
+    <div class="card card-pad">
+      <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700;margin-bottom:14px">Recent Inspections</div>
+      <div id="recent-ins"></div>
+    </div>
+  </div>
+  <div id="alert-section"></div>
+</div>
+
+<!-- ASSETS -->
+<div class="page" id="page-assets">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+    <div class="page-header" style="margin:0"><h2>Asset Registry</h2><p>All registered fire safety equipment</p></div>
+    <div id="add-asset-btn-wrap"></div>
+  </div>
+  <div class="filters" id="asset-filters">
+    <input type="text" id="search-input" placeholder="🔍 Search ID or location…" oninput="renderAssetTable()"/>
+  </div>
+  <div class="card tbl-wrap">
+    <table>
+      <thead><tr><th>Asset ID</th><th>Type</th><th>Location</th><th>Subtype</th><th>Installed</th><th>Next Due</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="asset-tbody"></tbody>
+    </table>
+    <div id="asset-empty" style="display:none;text-align:center;padding:34px;color:var(--muted)">No assets found</div>
+  </div>
+</div>
+
+<!-- ASSET DETAIL -->
+<div class="page" id="page-detail">
+  <button class="btn btn-ghost btn-sm" style="margin-bottom:14px" onclick="navigate('assets')">← Back</button>
+  <div class="two-col">
+    <div class="card card-pad" id="detail-left"></div>
+    <div class="card card-pad" id="detail-right"></div>
+  </div>
+</div>
+
+<!-- INSPECTIONS -->
+<div class="page" id="page-inspections">
+
+  <!-- ══ SETUP MODE: Inspector details + asset selection ══ -->
+  <div id="insp-setup-mode">
+    <div class="page-header"><h2>🔥 Start Inspection</h2><p>Fill in inspector details, pick any assets across all types, then begin</p></div>
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start">
+
+      <!-- LEFT: Inspector card -->
+      <div class="card card-pad" id="setup-inspector-card">
+        <div style="font-family:var(--font-head);font-size:1rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px"><span style="font-size:18px">👤</span> Inspector Info</div>
+        <div class="form-grid" style="gap:10px">
+          <div class="form-group"><label>Name *</label><input class="form-input" id="sess-name" placeholder="Inspector full name" oninput="checkSetupReady()"/></div>
+          <div class="form-group"><label>Designation</label><input class="form-input" id="sess-role" placeholder="e.g. Safety Officer"/></div>
+          <div class="form-row">
+            <div class="form-group"><label>Date *</label><input class="form-input" type="date" id="sess-date" oninput="checkSetupReady()"/></div>
+            <div class="form-group"><label>Shift</label>
+              <select class="form-input" id="sess-shift">
+                <option value="General">General</option><option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option><option value="Night">Night</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Selected Assets <span id="setup-count-badge" style="margin-left:6px;background:var(--red);color:#fff;padding:1px 8px;border-radius:20px;font-size:.68rem">0</span></div>
+        <div id="setup-selected-preview" style="max-height:200px;overflow-y:auto">
+          <div id="setup-preview-empty" style="font-size:.78rem;color:var(--muted);padding:8px 0">No assets selected yet. Pick from the panel →</div>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-red btn-full" id="btn-start-insp" onclick="startInspection()" disabled>▶ Start Inspection</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:7px" onclick="navigate('dashboard')">Cancel</button>
+      </div>
+
+      <!-- RIGHT: Asset browser (all types) -->
+      <div>
+        <!-- Type tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap" id="setup-type-tabs">
+          <button class="filter-btn active" onclick="setSetupTypeTab('all',this)">All Assets</button>
+          <button class="filter-btn" onclick="setSetupTypeTab('extinguisher',this)">🧯 Extinguishers</button>
+          <button class="filter-btn" onclick="setSetupTypeTab('hydrant',this)">🔴 Hydrants</button>
+          <button class="filter-btn" onclick="setSetupTypeTab('hose-reel',this)">🌀 Hose Reels</button>
+          <button class="filter-btn" onclick="setSetupTypeTab('generic',this)">⚙️ Other Equipment</button>
+        </div>
+        <!-- Quick actions -->
+        <div style="display:flex;gap:7px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="setupSelectAll()">✔ Select All Visible</button>
+          <button class="btn btn-ghost btn-sm" onclick="setupSelectOverdue()">🚨 Overdue Only</button>
+          <button class="btn btn-ghost btn-sm" onclick="setupSelectDueSoon()">⚠️ Due Soon Only</button>
+          <button class="btn btn-ghost btn-sm" onclick="setupClearAll()">✕ Clear</button>
+          <input type="text" id="setup-search" class="form-input" placeholder="🔍 Search…" style="max-width:200px;padding:5px 10px;font-size:.78rem" oninput="renderSetupAssetBrowser()"/>
+        </div>
+        <!-- Asset grid -->
+        <div id="setup-asset-browser" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px;max-height:520px;overflow-y:auto;padding:2px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ACTIVE SESSION WORKSPACE ══ -->
+  <div id="insp-session-mode" style="display:none">
+    <!-- Session header bar -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div>
+        <h2 style="font-family:var(--font-head);font-size:1.5rem;font-weight:700;line-height:1">Inspection Session</h2>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:2px" id="sess-info-bar">—</p>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openAddMoreModal()">➕ Add Assets</button>
+        <button class="btn btn-amber btn-sm" onclick="confirmFinishEarly()">⏹ Finish Session</button>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="card" style="padding:11px 16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:.82rem;font-weight:700">Session Progress</span>
+          <span style="font-size:.72rem;color:var(--muted)" id="sess-prog-label">0 / 0</span>
+        </div>
+        <div style="display:flex;gap:9px;font-size:.72rem;font-weight:700">
+          <span style="color:#15803d" id="sess-pass-count">✅ 0</span>
+          <span style="color:#dc2626" id="sess-fail-count">❌ 0</span>
+          <span style="color:#6366f1" id="sess-skip-count">⏭ 0</span>
+          <span style="color:var(--muted)" id="sess-pending-count">⏳ 0 pending</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;padding:6px 0">
+        <div class="asset-rail" id="asset-rail"></div>
+      </div>
+      <div class="prog-track" style="margin-top:8px"><div class="prog-fill" id="s4-bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- Two-column: asset queue + active checklist -->
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start">
+
+      <!-- LEFT: Asset queue -->
+      <div class="card" style="padding:0;overflow:hidden;position:sticky;top:16px">
+        <div style="padding:10px 14px;background:#fafafa;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-family:var(--font-head);font-size:.9rem;font-weight:700">Assets</div>
+          <span style="font-size:.72rem;color:var(--muted)" id="queue-count-label">0 assets</span>
+        </div>
+        <div id="asset-queue-list" style="max-height:540px;overflow-y:auto"></div>
+      </div>
+
+      <!-- RIGHT: Active checklist card -->
+      <div id="active-checklist-area">
+        <!-- Will be rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SUMMARY ══ -->
+  <div id="insp-summary-mode" style="display:none">
+    <div class="page-header"><h2>✅ Inspection Complete</h2><p id="summ-sub">—</p></div>
+
+    <!-- Big stats -->
+    <div class="summary-grid" id="summ-stats" style="margin-bottom:18px"></div>
+
+    <!-- Per-asset results -->
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700">Results by Asset</div>
+        <button class="btn btn-ghost btn-sm" onclick="printSessionSummary()">🖨 Print Summary</button>
+      </div>
+      <div id="summ-rows"></div>
+    </div>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-ghost" onclick="navigate('log')">📒 View Log</button>
+      <button class="btn btn-red" style="padding:10px 24px" onclick="resetAndNewSession()">🔄 New Inspection</button>
+    </div>
+  </div>
+
+</div><!-- /inspections -->
+
+<!-- INSPECTION LOG -->
+<div class="page" id="page-log">
+  <div class="page-header"><h2>Inspection Log</h2><p>Complete history of all inspections</p></div>
+  <div class="stat-grid" id="ins-stats"></div>
+  <div class="filters" style="margin-bottom:12px">
+    <input type="text" id="log-search" placeholder="🔍 Search asset ID or inspector…" oninput="renderLogPage()"/>
+    <select id="log-filter-result" class="form-input" style="max-width:160px" onchange="renderLogPage()">
+      <option value="">All Results</option><option value="pass">Pass Only</option><option value="fail">Fail Only</option><option value="skip">Skipped</option>
+    </select>
+  </div>
+  <div class="card tbl-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Asset</th><th>Date</th><th>Inspector</th><th>Designation</th><th>Shift</th><th>Result</th><th>Remarks</th><th></th></tr></thead>
+      <tbody id="ins-tbody"></tbody>
+    </table>
+    <div id="ins-empty" style="display:none;text-align:center;padding:32px;color:var(--muted)">No inspections yet</div>
+  </div>
+</div>
+
+<!-- MAINTENANCE LOG -->
+<div class="page" id="page-maintenance">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div class="page-header" style="margin:0"><h2>Maintenance Log</h2><p>Service history, repairs, and scheduled maintenance per asset</p></div>
+    <button class="btn btn-red" onclick="openAddMaintModal()">+ Add Record</button>
+  </div>
+  <div class="filters">
+    <input type="text" id="maint-search" placeholder="🔍 Search asset or description…" oninput="renderMaintenancePage()"/>
+    <select class="form-input" id="maint-type-filter" style="max-width:180px" onchange="renderMaintenancePage()">
+      <option value="">All Types</option>
+      <option value="service">Scheduled Service</option>
+      <option value="repair">Repair</option>
+      <option value="replacement">Replacement</option>
+      <option value="refill">Refilling/Recharge</option>
+      <option value="amc">AMC Visit</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div id="maint-list"></div>
+  <div id="maint-empty" style="display:none;text-align:center;padding:40px;color:var(--muted)">No maintenance records yet</div>
+</div>
+
+<!-- PLANT MAP -->
+
+<div class="page" id="page-qrcodes">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:9px">
+    <div class="page-header" style="margin:0"><h2>QR Code Manager</h2><p>Generate, print &amp; stick QR codes on equipment — scan shows full asset details</p></div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="selectAllQR()">Select All</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearSelQR()">Clear</button>
+      <button class="btn btn-blue btn-sm" onclick="printBulkQR()">🖨 Print</button>
+      <button class="btn btn-red btn-sm" onclick="downloadBulkZip()">⬇ PNGs</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <button class="filter-btn active" onclick="filterBulkQR('all',this)">All</button>
+    <button class="filter-btn" onclick="filterBulkQR('extinguisher',this)">🧯 Extinguishers</button>
+    <button class="filter-btn" onclick="filterBulkQR('hydrant',this)">🔴 Hydrants</button>
+    <button class="filter-btn" onclick="filterBulkQR('hose-reel',this)">🌀 Hose Reels</button>
+    <button class="filter-btn" onclick="filterBulkQR('generic',this)">⚙️ Other Equipment</button>
+  </div>
+  <div class="bulk-grid" id="bulk-qr-grid"></div>
+</div>
+
+<!-- REPORTS -->
+<div class="page" id="page-reports">
+  <div class="page-header"><h2>Reports &amp; Compliance</h2><p>Export and print management reports</p></div>
+  <div class="rep-grid">
+    <div class="card rep-card"><div class="rep-icon">📄</div><h3>Asset Compliance</h3><p>Full asset list with status and due dates</p><button class="btn btn-red btn-sm" onclick="exportCompliance()">⬇ CSV</button></div>
+    <div class="card rep-card"><div class="rep-icon">📋</div><h3>Inspection History</h3><p>Complete log with names and results</p><button class="btn btn-red btn-sm" onclick="exportInspections()">⬇ CSV</button></div>
+    <div class="card rep-card"><div class="rep-icon">🚨</div><h3>Overdue Assets</h3><p>Assets needing immediate attention</p><button class="btn btn-red btn-sm" onclick="exportOverdue()">⬇ CSV</button></div>
+    <div class="card rep-card"><div class="rep-icon">🔧</div><h3>Maintenance Records</h3><p>All service and repair history</p><button class="btn btn-red btn-sm" onclick="exportMaintenance()">⬇ CSV</button></div>
+    <div class="card rep-card"><div class="rep-icon">📊</div><h3>Print Summary</h3><p>Printable compliance table</p><button class="btn btn-ghost btn-sm" onclick="printSummary()">🖨 Print</button></div>
+    <div class="card rep-card"><div class="rep-icon">🗒️</div><h3>Asset Detail Report</h3><p>Full report for a specific asset</p>
+      <select class="form-input" id="rep-asset-select" style="margin-bottom:8px;font-size:.75rem"></select>
+      <button class="btn btn-ghost btn-sm" onclick="printAssetReport()">🖨 Print Report</button>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700;margin-bottom:12px">Asset-wise Compliance</div>
+    <table><thead><tr><th>Asset</th><th>Location</th><th>Last Inspection</th><th>Inspector</th><th>Status</th></tr></thead><tbody id="rep-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- AUDIT LOG -->
+<div class="page" id="page-auditlog">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:9px">
+    <div class="page-header" style="margin:0"><h2>Audit Log</h2><p>All portal events and data changes</p></div>
+    <div style="display:flex;gap:7px">
+      <button class="btn btn-ghost btn-sm" onclick="clearAuditLog()">🗑 Clear</button>
+      <button class="btn btn-red btn-sm" onclick="exportAuditLog()">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="filters" style="margin-bottom:12px">
+    <input type="text" id="audit-search" placeholder="🔍 Search events…" oninput="renderAuditPage()"/>
+    <select class="form-input" id="audit-type-filter" style="max-width:180px" onchange="renderAuditPage()">
+      <option value="">All Events</option>
+      <option value="login">Login</option><option value="logout">Logout</option>
+      <option value="asset_add">Asset Added</option><option value="asset_edit">Asset Edited</option>
+      <option value="inspection">Inspection</option><option value="maintenance">Maintenance</option>
+      <option value="admin">Admin Actions</option>
+    </select>
+  </div>
+  <div class="card tbl-wrap">
+    <table><thead><tr><th>#</th><th>Timestamp</th><th>User</th><th>Role</th><th>Event</th><th>Details</th></tr></thead>
+    <tbody id="audit-tbody"></tbody></table>
+    <div id="audit-empty" style="display:none;text-align:center;padding:32px;color:var(--muted)">No audit events</div>
+  </div>
+</div>
+
+<!-- USERS & ROLES -->
+<div class="page" id="page-usermgmt">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div class="page-header" style="margin:0"><h2>Users &amp; Roles</h2><p>Manage users, roles, and page-level permissions</p></div>
+    <button class="btn btn-red" onclick="openAddUserModal()">+ Add User</button>
+  </div>
+  <div id="user-cards"></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-header"><h2>Settings</h2><p>Portal configuration and preferences</p></div>
+  <div class="settings-section">
+    <h3>🏢 Company / Portal Identity</h3>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-group"><label>Company Name</label><input class="form-input" id="set-company" placeholder="e.g. Seoyon E-Hwa Summit Automotive India"/></div>
+        <div class="form-group"><label>Portal Short Name</label><input class="form-input" id="set-brand" placeholder="e.g. FireSafe"/></div>
+      </div>
+    </div>
+    <button class="btn btn-red btn-sm" style="margin-top:12px" onclick="saveCompanySettings()">Save Identity</button>
+  </div>
+  <div class="settings-section">
+    <h3>🔔 Notifications</h3>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Browser Notifications</div><div class="toggle-desc">Alert when assets are overdue or due soon</div></div>
+      <label class="toggle"><input type="checkbox" id="set-notif" onchange="toggleNotifications()"/><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Overdue Alert on Login</div><div class="toggle-desc">Show overdue count popup on sign-in</div></div>
+      <label class="toggle"><input type="checkbox" id="set-overdue-popup" onchange="saveNotifSettings()"/><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>🎨 Display</h3>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Font Size Control</div><div class="toggle-desc">Show font size control in sidebar</div></div>
+      <label class="toggle"><input type="checkbox" id="set-fz-show" onchange="toggleFZControl()"/><span class="toggle-slider"></span></label>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="form-group"><label>Quick Font Size</label>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="setFZ(12)">Small (12px)</button>
+          <button class="btn btn-ghost btn-sm" onclick="setFZ(14)">Normal (14px)</button>
+          <button class="btn btn-ghost btn-sm" onclick="setFZ(16)">Large (16px)</button>
+          <button class="btn btn-ghost btn-sm" onclick="setFZ(18)">X-Large (18px)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>💾 Data Management</h3>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="exportAllData()">⬇ Export All Data (JSON)</button>
+      <button class="btn btn-danger btn-sm" onclick="resetPortalData()">⚠️ Reset All Portal Data</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#main -->
+
+<!-- MODALS -->
+<!-- Asset add/edit -->
+<div class="modal-overlay" id="asset-modal">
+  <div class="modal" style="max-width:560px">
+    <h3 id="asset-modal-title">Add Asset</h3>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-group"><label>Asset Type *</label>
+          <select class="form-input" id="m-type" onchange="onAssetTypeChange()">
+            <option value="extinguisher">🧯 Fire Extinguisher</option>
+            <option value="hydrant">🔴 Fire Hydrant</option>
+            <option value="hose-reel">🌀 Hose Reel</option>
+            <option value="generic">⚙️ Other Equipment</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Asset ID *</label><input class="form-input" id="m-id" placeholder="e.g. FT-001"/></div>
+      </div>
+      <!-- Generic type label row (hidden for standard types) -->
+      <div class="form-group" id="m-generic-label-row" style="display:none">
+        <label>Equipment Name *</label>
+        <input class="form-input" id="m-generic-label" placeholder="e.g. Fire Tender, Sand Bucket, CO2 System…"/>
+      </div>
+      <div class="form-group"><label>Location *</label><input class="form-input" id="m-loc" placeholder="e.g. Block C, First Floor"/></div>
+      <div class="form-group" id="m-sub-row"><label>Subtype / Capacity</label><input class="form-input" id="m-sub" placeholder="e.g. DCP 9kg, CO2 4.5kg"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Installation Date</label><input class="form-input" type="date" id="m-inst"/></div>
+        <div class="form-group"><label>Next Inspection Due</label><input class="form-input" type="date" id="m-due"/></div>
+      </div>
+      <div class="form-group" id="m-status-row" style="display:none"><label>Status</label>
+        <select class="form-input" id="m-status"><option value="ok">✅ OK</option><option value="due-soon">⚠️ Due Soon</option><option value="overdue">🚨 Overdue</option></select>
+      </div>
+      <!-- Custom fields section -->
+      <div id="m-custom-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <div style="font-size:.75rem;font-weight:700;color:var(--dim)">⚙️ Additional Details <span style="font-weight:400;color:var(--muted)">(optional — shown on QR scan)</span></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addCustomField()">+ Add Field</button>
+        </div>
+        <div id="m-custom-fields"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:18px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('asset-modal')">Cancel</button>
+      <button class="btn btn-red" style="flex:1" id="asset-modal-btn" onclick="saveAsset()">Add Asset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance add -->
+<div class="modal-overlay" id="maint-modal">
+  <div class="modal">
+    <h3 id="maint-modal-title">Add Maintenance Record</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Asset *</label>
+        <select class="form-input" id="mm-asset"><option value="">— Select asset —</option></select>
+      </div>
+      <div class="form-group"><label>Maintenance Type *</label>
+        <select class="form-input" id="mm-type">
+          <option value="service">Scheduled Service</option><option value="repair">Repair</option>
+          <option value="replacement">Replacement</option><option value="refill">Refilling/Recharge</option>
+          <option value="amc">AMC Visit</option><option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date *</label><input class="form-input" type="date" id="mm-date"/></div>
+        <div class="form-group"><label>Next Service Date</label><input class="form-input" type="date" id="mm-next"/></div>
+      </div>
+      <div class="form-group"><label>Performed By *</label><input class="form-input" id="mm-by" placeholder="Name / Company"/></div>
+      <div class="form-group"><label>Description *</label><textarea class="form-input" id="mm-desc" rows="3" placeholder="Work done, parts replaced, observations…" style="resize:vertical"></textarea></div>
+      <div class="form-group"><label>Cost (₹)</label><input class="form-input" id="mm-cost" type="number" placeholder="0"/></div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:18px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('maint-modal')">Cancel</button>
+      <button class="btn btn-red" style="flex:1" onclick="saveMaintRecord()">Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User modal -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal">
+    <h3 id="user-modal-title">Add New User</h3>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-group"><label>Full Name *</label><input class="form-input" id="um-name" placeholder="Full name"/></div>
+        <div class="form-group"><label>Username *</label><input class="form-input" id="um-user" placeholder="login username"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Password *</label><input class="form-input" type="password" id="um-pass" placeholder="min 6 chars"/></div>
+        <div class="form-group"><label>Avatar Emoji</label><input class="form-input" id="um-avatar" placeholder="e.g. 👤" maxlength="2"/></div>
+      </div>
+      <div class="form-group"><label>Role</label>
+        <select class="form-input" id="um-role">
+          <option value="admin">Admin</option><option value="inspector" selected>Inspector</option><option value="viewer">Viewer</option>
+        </select>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;border:1px solid var(--border)">
+        <div style="font-size:.72rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Page Access Permissions</div>
+        <div id="um-perms-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('user-modal')">Cancel</button>
+      <button class="btn btn-red" style="flex:1" id="user-modal-btn" onclick="saveUser()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add more assets mid-session modal -->
+<div class="modal-overlay" id="add-more-modal">
+  <div class="modal" style="width:680px">
+    <h3>➕ Add More Assets to Session</h3>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Select additional assets to add to the current inspection session</p>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="filter-btn active" onclick="setAddMoreTab('all',this)">All</button>
+      <button class="filter-btn" onclick="setAddMoreTab('extinguisher',this)">🧯</button>
+      <button class="filter-btn" onclick="setAddMoreTab('hydrant',this)">🔴</button>
+      <button class="filter-btn" onclick="setAddMoreTab('hose-reel',this)">🌀</button>
+    </div>
+    <div id="add-more-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px;max-height:340px;overflow-y:auto;margin-bottom:14px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.78rem;color:var(--muted)" id="add-more-count">0 selected</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeModal('add-more-modal')">Cancel</button>
+        <button class="btn btn-red" onclick="confirmAddMore()">Add to Session</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="qr-modal" onclick="closeQR(event)">
+  <div class="modal qr-modal" onclick="event.stopPropagation()">
+    <h3 style="margin-bottom:4px">Asset QR Code</h3>
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:12px" id="qr-modal-sub">—</div>
+    <div id="qr-canvas-wrap" style="display:flex;justify-content:center;background:#fff;border-radius:10px;padding:13px;border:1px solid var(--border)"></div>
+    <div class="qr-label" id="qr-label-wrap" style="margin-top:7px"></div>
+    <div style="font-size:.7rem;color:var(--muted);margin:10px 0 4px">Scanning opens asset view — no login required</div>
+    <div style="display:flex;gap:7px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeQR()">Close</button>
+      <button class="btn btn-blue" style="flex:1" onclick="downloadQRpng()">⬇ PNG</button>
+      <button class="btn btn-red" style="flex:1" onclick="printOneQR()">🖨 Print</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════
+// localStorage only for device-local auth session + settings/font preference
+const AUTH_KEY='firesafe_auth_v7';
+const SETTINGS_KEY='firesafe_settings_v7';
+
+// ── Firebase shorthand (set once fb-ready fires) ──────
+let _fs=null; // Firestore instance proxy, populated after fb-ready
+
+// All Firestore paths live under collection "firesafe" → doc "portal" → sub-collections
+// firesafe/portal/assets/{assetId}
+// firesafe/portal/inspections/{id}
+// firesafe/portal/maintenance/{id}
+// firesafe/portal/audit/{id}
+// firesafe/portal/config/users        (single doc)
+// firesafe/portal/config/passwords    (single doc)
+// firesafe/portal/config/settings     (single doc)
+// firesafe/portal/config/session      (single doc)
+
+// ── In-memory DB (kept in sync via Firestore listeners) ─
+let DB = { assets:[], inspections:[], maintenance:[], session:null };
+
+// ── Firestore doc reference helper ───────────────────────
+function fsDoc(id){ return _db.doc('firesafe/'+id); }
+
+// ── Firestore write helpers ──────────────────────────────
+async function fbWriteAssets(){ await fsDoc('_assets').set({list:DB.assets}); }
+async function fbWriteInspections(){ await fsDoc('_inspections').set({list:DB.inspections}); }
+async function fbWriteMaintenance(){ await fsDoc('_maintenance').set({list:DB.maintenance||[]}); }
+async function fbWriteSession(){ const s=DB.session?{...DB.session,active:true}:{active:false}; await fsDoc('_session').set(s); }
+async function fbWriteAudit(){ await fsDoc('_audit').set({list:_auditCache.slice(0,800)}); }
+async function fbSaveUsers(users){ await fsDoc('_users').set({list:users}); }
+async function fbSavePW(pw){ await fsDoc('_passwords').set(pw); }
+
+// dbSave() no-op — callers use targeted fbWrite* functions
+function dbSave(){ }
+
+// ── Real-time listeners (set up after login) ─────────────
+let _listeners = [];
+function teardownListeners(){ _listeners.forEach(u=>u()); _listeners=[]; }
+
+function setupRealtimeListeners(){
+  teardownListeners();
+
+  function listenDoc(docId, cb){
+    const unsub = _db.doc('firesafe/'+docId).onSnapshot(snap=>{
+      if(snap.exists) cb(snap.data());
+    });
+    _listeners.push(unsub);
+  }
+
+  listenDoc('_assets', d=>{ DB.assets=d.list||[]; if(currentUser){updateSidebar();renderCurrentPage();} });
+  listenDoc('_inspections', d=>{ DB.inspections=d.list||[]; if(currentUser)renderCurrentPage(); });
+  listenDoc('_maintenance', d=>{ DB.maintenance=d.list||[]; if(currentUser)renderCurrentPage(); });
+  listenDoc('_session', d=>{ DB.session=(d&&d.active)?d:null; if(currentUser)updateSidebar(); });
+  listenDoc('_audit', d=>{ _auditCache=d.list||[]; });
+  listenDoc('_settings', d=>{ if(d&&Object.keys(d).length){Object.assign(S,d);applySettings();} });
+  listenDoc('_users', d=>{ if(d&&d.list)_usersCache=d.list; });
+  listenDoc('_passwords', d=>{ if(d)_pwCache=Object.assign({},DEFAULT_PW,d); });
+}
+
+let _currentPage='dashboard';
+function renderCurrentPage(){ if(_currentPage)navigate(_currentPage); }
+
+// ── In-memory caches ──────────────────────────────────────
+let _usersCache = null;
+let _pwCache    = null;
+let _auditCache = [];
+
+const TI={extinguisher:'🧯',hydrant:'🔴','hose-reel':'🌀',generic:'⚙️'};
+const TL={extinguisher:'Fire Extinguisher',hydrant:'Fire Hydrant','hose-reel':'Hose Reel',generic:'Other Equipment'};
+function aLabel(a){return a.type==='generic'?(a.genericLabel||'Other Equipment'):TL[a.type];}
+function aIcon(a){return TI[a.type]||'⚙️';}
+const TC={extinguisher:'#e53e1e',hydrant:'#2563eb','hose-reel':'#16a34a'};
+const STAG={ok:'tag-ok','due-soon':'tag-soon',overdue:'tag-over'};
+const SLBL={ok:'OK','due-soon':'Due Soon',overdue:'Overdue'};
+
+const ALL_PAGES=['dashboard','assets','inspections','log','maintenance','qrcodes','reports','auditlog','usermgmt','settings'];
+const ADMIN_PAGES=['qrcodes','reports','auditlog','usermgmt','settings'];
+
+const CL={
+  extinguisher:[
+    'Operating Sticker (valid & legible)',
+    'Hose Condition (no cracks / damage)',
+    'Bottom Ring (intact, no corrosion)',
+    'Safety Pin (intact & sealed)',
+    'Neck Handle (undamaged, functional)',
+    'AMC Tag & Refilling Tag (present & valid)',
+    'Signage Board (clearly visible)',
+    'Wall Clamp (secure & properly mounted)',
+    'Floor Stand / Floor Marking (in place)',
+    'Painting (no rust, surface in good condition)',
+  ],
+  hydrant:[
+    'Hose Box (condition, door functional)',
+    'Hose Box Glass (intact / replaced)',
+    'Key Glass (intact / replaced)',
+    'Key (available & functional)',
+    'Hose Condition – 1 (no cracks, kinks)',
+    'Hose Condition – 2 (couplings & fittings)',
+    'Valve Condition (opens/closes smoothly)',
+    'Coupling (secure, undamaged)',
+    'Valve Closing Cap (in place)',
+    'Nozzle (functional, undamaged)',
+  ],
+  'hose-reel':[
+    'Hose (no kinks, cracks, or burns)',
+    'Hose Reel Drum Condition (free rotation)',
+    'Swinging Hose Reel Condition (swings freely)',
+    'Jet Nozzle (functional, undamaged)',
+    'Valve Handle (operational)',
+    'Valve Condition (no leakage)',
+    'Water Flow Supply (adequate pressure)',
+    'Pipe Line (no leaks or damage)',
+    'Painting (no rust, surface in good condition)',
+  ],
+};
+
+// ── Settings ──────────────────────────────────────────────
+const DEFAULT_SETTINGS={company:'Seoyon E-Hwa Summit Automotive India Pvt Ltd',brand:'FireSafe',notif:false,overduePopup:true,fzShow:true,fz:14};
+function getSettings(){ try{return Object.assign({...DEFAULT_SETTINGS},JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'))}catch(e){return{...DEFAULT_SETTINGS};} }
+function saveSettings(s){
+  try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}catch(e){}
+  if(_db) fsDoc('_settings').set(s).catch(()=>{});
+}
+let S=getSettings();
+
+function applySettings(){
+  const brand=S.brand||'FireSafe';
+  const splitAt=Math.max(4,Math.floor(brand.length/2));
+  const ge=(id)=>document.getElementById(id);
+  const st=(id,v)=>{const e=ge(id);if(e)e.textContent=v;};
+  st('sb-brand-name',brand);
+  st('sb-company-name',S.company||'');
+  const el1=ge('login-title-brand'),el2=ge('login-title-safe');
+  if(el1)el1.textContent=brand.slice(0,splitAt);
+  if(el2)el2.textContent=brand.slice(splitAt);
+  st('login-company-sub',S.company||'');
+  st('qpv-company',brand+' Portal');
+  document.title=brand+' Portal';
+  setFZ(S.fz||14,false);
+  const sfz=ge('sidebar-fz');
+  if(sfz)sfz.style.display=S.fzShow!==false?'block':'none';
+}
+function saveCompanySettings(){
+  S.company=document.getElementById('set-company').value.trim();
+  S.brand=document.getElementById('set-brand').value.trim()||'FireSafe';
+  saveSettings(S);applySettings();toast('✅ Identity saved!');
+}
+function toggleNotifications(){
+  S.notif=document.getElementById('set-notif').checked;
+  saveSettings(S);
+  if(S.notif&&'Notification' in window){Notification.requestPermission();}
+}
+function saveNotifSettings(){S.overduePopup=document.getElementById('set-overdue-popup').checked;saveSettings(S);}
+function toggleFZControl(){S.fzShow=document.getElementById('set-fz-show').checked;saveSettings(S);const sfz=document.getElementById('sidebar-fz');if(sfz)sfz.style.display=S.fzShow?'block':'none';}
+function loadSettingsPage(){
+  document.getElementById('set-company').value=S.company||'';
+  document.getElementById('set-brand').value=S.brand||'FireSafe';
+  document.getElementById('set-notif').checked=!!S.notif;
+  document.getElementById('set-overdue-popup').checked=S.overduePopup!==false;
+  document.getElementById('set-fz-show').checked=!!S.fzShow;
+}
+function exportAllData(){
+  const d={assets:DB.assets,inspections:DB.inspections,maintenance:DB.maintenance||[],audit:getAuditLog(),settings:S,exported:new Date().toISOString()};
+  const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='firesafe-backup-'+new Date().toISOString().split('T')[0]+'.json';a.click();toast('✅ Data exported!');
+}
+function resetPortalData(){
+  if(!confirm('⚠️ This will delete ALL assets, inspections, and maintenance records. Cannot be undone.'))return;
+  if(!confirm('Final confirmation — reset ALL portal data?'))return;
+  DB=defaultDB();
+  Promise.all([fbWriteAssets(),fbWriteInspections(),fbWriteMaintenance(),fbWriteSession()])
+    .then(()=>{ navigate('dashboard');toast('Portal data reset','warn'); });
+}
+
+// ═══════════════════════════════════════════════════════
+//  FONT SIZE
+// ═══════════════════════════════════════════════════════
+let currentFZ=S.fz||14;
+function changeFZ(d){setFZ(Math.min(22,Math.max(10,currentFZ+d)));}
+function setFZ(n,persist=true){
+  currentFZ=n;
+  document.documentElement.style.setProperty('--fz',n+'px');
+  const el=document.getElementById('fz-current');if(el)el.textContent=n+'px';
+  if(persist){S.fz=n;saveSettings(S);}
+}
+function resetFZ(){setFZ(14);}
+
+// ── Users & Passwords ─────────────────────────────────────
+const DEFAULT_PW={admin:'admin123',insp1:'insp123',insp2:'insp123',insp3:'insp123',insp4:'insp123',insp5:'insp123',insp6:'insp123',viewer:'view123'};
+
+function loadUsers(){ return _usersCache||DEFAULT_USERS; }
+function saveUsers(users){ _usersCache=users; fbSaveUsers(users); }
+function loadPW(){ return _pwCache||{...DEFAULT_PW}; }
+function savePW(pw){ _pwCache=pw; fbSavePW(pw); }
+function getUsers(){ return loadUsers(); }
+function getUserPW(id){ return loadPW()[id]||''; }
+
+let currentUser=null;
+
+// ── Audit ─────────────────────────────────────────────────
+function getAuditLog(){ return _auditCache||[]; }
+function saveAuditLog(l){ _auditCache=l.slice(0,800); fbWriteAudit(); }
+function auditLog(type,detail){
+  if(!currentUser)return;
+  const entry={id:Date.now(),ts:new Date().toISOString(),userId:currentUser.id,userName:currentUser.name,userRole:currentUser.role,type,detail};
+  _auditCache.unshift(entry);
+  fbWriteAudit();
+}
+
+// ── Login ─────────────────────────────────────────────────
+function showForgotPanel(){
+  document.getElementById('login-panel').style.display='none';
+  document.getElementById('reset-panel').style.display='block';
+  const sel=document.getElementById('rt-user');
+  sel.innerHTML='<option value="">— Select user —</option>'+getUsers().map(u=>`<option value="${u.id}">${u.name} (@${u.username})</option>`).join('');
+}
+function showLoginPanel(){
+  document.getElementById('reset-panel').style.display='none';
+  document.getElementById('login-panel').style.display='block';
+  document.getElementById('reset-err').classList.remove('show');
+  document.getElementById('reset-succ').classList.remove('show');
+}
+
+function doResetPassword(){
+  const pw=loadPW(); const users=getUsers();
+  const admin=users.find(u=>u.username===document.getElementById('ra-user').value.trim()&&pw[u.id]===document.getElementById('ra-pass').value&&u.role==='admin');
+  const err=document.getElementById('reset-err'),succ=document.getElementById('reset-succ');
+  err.classList.remove('show');succ.classList.remove('show');
+  if(!admin){err.textContent='Invalid admin credentials.';err.classList.add('show');return;}
+  const tid=document.getElementById('rt-user').value;
+  if(!tid){err.textContent='Select a user.';err.classList.add('show');return;}
+  const np=document.getElementById('rn-pass').value,cp=document.getElementById('rc-pass').value;
+  if(np.length<6){err.textContent='Password must be at least 6 characters.';err.classList.add('show');return;}
+  if(np!==cp){err.textContent='Passwords do not match.';err.classList.add('show');return;}
+  pw[tid]=np; savePW(pw);
+  const tu=users.find(u=>u.id===tid);
+  const saved=currentUser;currentUser={id:'admin',name:'Administrator',role:'admin'};
+  auditLog('admin',`Password reset for ${tu?tu.name:tid}`);currentUser=saved;
+  succ.textContent=`✅ Password for ${tu?tu.name:tid} has been reset.`;succ.classList.add('show');
+  setTimeout(showLoginPanel,2500);
+}
+
+function doLogin(){
+  const uname=document.getElementById('login-user').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const users=getUsers(); const pw=loadPW();
+  const user=users.find(u=>u.username.toLowerCase()===uname&&(pw[u.id]||pw[u.username]||'')===pass);
+  const err=document.getElementById('login-err');
+  if(!user){err.classList.add('show');return;}
+  err.classList.remove('show');
+  currentUser=user;
+  // Session token stays local
+  try{localStorage.setItem(AUTH_KEY,JSON.stringify({id:user.id,ts:Date.now()}))}catch(e){}
+  updateLastSeen(user.id);
+  auditLog('login','Signed in');
+  setupRealtimeListeners();
+  showPortal();
+  if(S.overduePopup){
+    const od=DB.assets.filter(a=>a.status==='overdue').length;
+    if(od>0)setTimeout(()=>toast(`🚨 ${od} overdue asset${od>1?'s':''} need attention`,'err'),800);
+  }
+  checkBrowserNotifications();
+}
+
+function doLogout(){
+  auditLog('logout','Signed out');
+  teardownListeners();
+  currentUser=null;
+  try{localStorage.removeItem(AUTH_KEY)}catch(e){}
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('sidebar').style.display='none';
+  document.getElementById('main').style.display='none';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  showLoginPanel();
+}
+
+function checkPersistedSession(){
+  try{
+    const s=JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
+    if(!s||Date.now()-s.ts>8*3600*1000){localStorage.removeItem(AUTH_KEY);return false;}
+    const u=getUsers().find(x=>x.id===s.id);
+    if(!u)return false;
+    currentUser=u; updateLastSeen(u.id);
+    setupRealtimeListeners();
+    return true;
+  }catch(e){return false;}
+}
+
+function updateLastSeen(uid){
+  _db.doc('firesafe/_lastseen_'+uid).set({uid, ts:new Date().toISOString()}).catch(()=>{});
+}
+function getLastSeen(uid){
+  return _lastSeenCache[uid] ? new Date(_lastSeenCache[uid]).toLocaleString() : 'Never';
+}
+let _lastSeenCache={};
+function loadLastSeenAll(){
+  getUsers().forEach(u=>{
+    const unsub = _db.doc('firesafe/_lastseen_'+u.id).onSnapshot(snap=>{
+      if(snap.exists) _lastSeenCache[u.id]=snap.data().ts;
+    });
+    _listeners.push(unsub);
+  });
+}
+
+function showPortal(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('sidebar').style.display='flex';
+  document.getElementById('main').style.display='block';
+
+  document.getElementById('uc-avatar').textContent=currentUser.avatar||'👤';
+  document.getElementById('uc-avatar').style.background=currentUser.bg||'#f1f5f9';
+  document.getElementById('uc-avatar').style.color=currentUser.color||'#475569';
+  document.getElementById('uc-name').textContent=currentUser.name;
+  document.getElementById('uc-role').textContent=currentUser.role==='admin'?'🛡 Admin':currentUser.role==='inspector'?'🔍 Inspector':'👁 Viewer';
+
+  const allowed=currentUser.pages||['dashboard'];
+  const isAdmin=currentUser.role==='admin';
+  document.getElementById('nav-section-admin').style.display=isAdmin?'block':'none';
+  document.querySelectorAll('#main-nav .nav-btn').forEach(b=>{
+    const pg=b.dataset.page;
+    if(pg==='dashboard'){b.style.display='flex';return;}
+    b.style.display=(allowed.includes(pg))?'flex':'none';
+  });
+  navigate('dashboard');
+}
+
+function showLoginFromPublic(){
+  document.getElementById('qr-public-view').classList.remove('show');
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════
+//  DB
+// ═══════════════════════════════════════════════════════
+// ── Default users (used until Firestore syncs) ────────────
+const DEFAULT_USERS=[
+  {id:'admin',  username:'admin',  name:'Administrator',   role:'admin',     avatar:'🛡',color:'#be185d',bg:'#fce7f3',pages:ALL_PAGES},
+  {id:'insp1',  username:'insp1',  name:'Ramesh Kumar',    role:'inspector', avatar:'🔍',color:'#1d4ed8',bg:'#dbeafe',pages:['dashboard','inspections','log','maintenance']},
+  {id:'insp2',  username:'insp2',  name:'Priya Singh',     role:'inspector', avatar:'🔍',color:'#1d4ed8',bg:'#dbeafe',pages:['dashboard','inspections','log','maintenance']},
+  {id:'insp3',  username:'insp3',  name:'Arun Murugan',    role:'inspector', avatar:'🔍',color:'#1d4ed8',bg:'#dbeafe',pages:['dashboard','inspections','log','maintenance']},
+  {id:'insp4',  username:'insp4',  name:'Suresh Babu',     role:'inspector', avatar:'🔍',color:'#1d4ed8',bg:'#dbeafe',pages:['dashboard','inspections','log','maintenance']},
+  {id:'insp5',  username:'insp5',  name:'Kavitha Devi',    role:'inspector', avatar:'🔍',color:'#1d4ed8',bg:'#dbeafe',pages:['dashboard','inspections','log','maintenance']},
+  {id:'insp6',  username:'insp6',  name:'Mohammed Ashraf', role:'inspector', avatar:'🔍',color:'#1d4ed8',bg:'#dbeafe',pages:['dashboard','inspections','log','maintenance']},
+  {id:'viewer', username:'viewer', name:'Dashboard Viewer',role:'viewer',    avatar:'👁',color:'#475569',bg:'#f1f5f9',pages:['dashboard']},
+];
+
+function defaultDB(){return{
+  assets:[
+    {id:'EXT-001',type:'extinguisher',location:'Block A – Ground Floor',subtype:'DCP 9kg',installed:'2023-01-15',nextDue:'2025-01-15',status:'ok'},
+    {id:'EXT-002',type:'extinguisher',location:'Block A – First Floor',subtype:'CO2 4.5kg',installed:'2023-03-01',nextDue:'2024-09-01',status:'overdue'},
+    {id:'EXT-003',type:'extinguisher',location:'Block B – Production',subtype:'DCP 6kg',installed:'2023-06-10',nextDue:'2025-06-10',status:'ok'},
+    {id:'HYD-001',type:'hydrant',location:'Main Gate Area',subtype:'Internal Hydrant',installed:'2022-05-20',nextDue:'2025-05-20',status:'ok'},
+    {id:'HYD-002',type:'hydrant',location:'Warehouse South',subtype:'Yard Hydrant',installed:'2022-05-20',nextDue:'2025-03-01',status:'due-soon'},
+    {id:'HR-001',type:'hose-reel',location:'Block A – Corridor',subtype:'30m Hose Reel',installed:'2023-02-14',nextDue:'2025-02-14',status:'ok'},
+    {id:'HR-002',type:'hose-reel',location:'Block B – Exit',subtype:'20m Hose Reel',installed:'2023-02-14',nextDue:'2024-08-14',status:'overdue'},
+  ],
+  inspections:[
+    {id:'INS-001',assetId:'EXT-001',date:'2025-01-10',inspector:'Ramesh Kumar',role:'Safety Officer',shift:'General',passed:true,skipped:false,remarks:'All checks passed'},
+    {id:'INS-002',assetId:'EXT-002',date:'2024-07-22',inspector:'Priya Singh',role:'EHS Executive',shift:'Morning',passed:false,skipped:false,remarks:'Pressure low – sent for refilling'},
+    {id:'INS-003',assetId:'HYD-001',date:'2025-01-05',inspector:'Alberto',role:'EOHS Officer',shift:'General',passed:true,skipped:false,remarks:'Functional, no issues'},
+  ],
+  maintenance:[
+    {id:'MNT-001',assetId:'EXT-001',type:'service',date:'2024-06-01',nextService:'2025-06-01',by:'SafeCare AMC Services',desc:'Annual AMC service — pressure checked, hose replaced',cost:1200},
+    {id:'MNT-002',assetId:'EXT-002',type:'refill',date:'2024-08-10',nextService:'2025-02-10',by:'ABC Fire Safety',desc:'Refilled DCP powder after pressure drop failure',cost:450},
+  ],
+  session:null,
+};}
+
+// DB is kept in memory and synced from Firestore via listeners
+// (already declared above in the Firebase layer)
+
+// ═══════════════════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════════════════
+function navigate(page){
+  _currentPage=page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  const el=document.getElementById('page-'+page);if(el)el.classList.add('active');
+  if(page==='dashboard')renderDashboard();
+  if(page==='assets')renderAssetPage();
+  if(page==='inspections')renderInspPage();
+  if(page==='log')renderLogPage();
+  if(page==='maintenance')renderMaintenancePage();
+  if(page==='qrcodes')renderBulkQRPage();
+  if(page==='reports')renderReports();
+  if(page==='auditlog')renderAuditPage();
+  if(page==='usermgmt')renderUserMgmt();
+  if(page==='settings')loadSettingsPage();
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+let _tt;
+function toast(msg,type='ok'){const e=document.getElementById('toast');e.textContent=msg;e.className='show '+type;clearTimeout(_tt);_tt=setTimeout(()=>{e.className=''},3400);}
+function tagH(s){return`<span class="tag ${STAG[s]||'tag-ok'}">${SLBL[s]||s}</span>`;}
+function passTag(p,sk){return sk?'<span class="tag tag-skip">SKIPPED</span>':p?'<span class="tag tag-pass">PASS</span>':'<span class="tag tag-fail">FAIL</span>';}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function getStats(){
+  const a=DB.assets;
+  return{total:a.length,ok:a.filter(x=>x.status==='ok').length,dueSoon:a.filter(x=>x.status==='due-soon').length,overdue:a.filter(x=>x.status==='overdue').length,ext:a.filter(x=>x.type==='extinguisher').length,hyd:a.filter(x=>x.type==='hydrant').length,hr:a.filter(x=>x.type==='hose-reel').length};
+}
+
+function updateSidebar(){
+  const s=getStats();
+  const pct=s.total?Math.round(s.ok/s.total*100):0;
+  const pctEl=document.getElementById('sb-pct');
+  if(pctEl){pctEl.textContent=pct+'% Assets OK';pctEl.style.color=s.overdue>0?'#dc2626':'#16a34a';}
+  const barEl=document.getElementById('sb-bar');if(barEl)barEl.style.width=pct+'%';
+  const pill=document.getElementById('sess-pill'),ind=document.getElementById('session-indicator');
+  if(DB.session){
+    if(pill)pill.style.display='inline-block';
+    if(ind)ind.classList.add('show');
+    const types=[...new Set(DB.session.assetIds.map(id=>{const a=DB.assets.find(x=>x.id===id);return a?TL[a.type]:'Asset';}).filter(Boolean))];
+    const tn=document.getElementById('si-type-name');
+    if(tn)tn.textContent=types.length<=2?types.join(' + '):`${types.length} types`;
+    const sp=document.getElementById('si-progress-sb');
+    if(sp)sp.textContent=`${DB.session.results.length} of ${DB.session.assetIds.length} done`;
+  }else{
+    if(pill)pill.style.display='none';
+    if(ind)ind.classList.remove('show');
+  }
+}
+
+// ── Browser notifications ──────────────────────────────
+function checkBrowserNotifications(){
+  if(!S.notif||!('Notification' in window)||Notification.permission!=='granted')return;
+  const od=DB.assets.filter(a=>a.status==='overdue');
+  const ds=DB.assets.filter(a=>a.status==='due-soon');
+  if(od.length>0)new Notification(`🔥 FireSafe: ${od.length} Overdue Asset${od.length>1?'s':''}`,{body:od.map(a=>a.id+' — '+a.location).join('\n'),icon:''});
+  else if(ds.length>0)new Notification(`⚠️ FireSafe: ${ds.length} Asset${ds.length>1?'s':''} Due Soon`,{body:ds.map(a=>a.id+' — '+a.location).join('\n'),icon:''});
+}
+
+// ═══════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard(){
+  updateSidebar();
+  if(currentUser)document.getElementById('dash-greeting').textContent=`Welcome, ${currentUser.name.split(' ')[0]} — ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}`;
+  const s=getStats();
+  document.getElementById('stat-grid').innerHTML=[
+    {lbl:'Total Assets',val:s.total,icon:'🗂️',col:'#6366f1'},
+    {lbl:'Compliant',val:s.ok,icon:'✅',col:'#16a34a'},
+    {lbl:'Due Soon',val:s.dueSoon,icon:'⚠️',col:'#d97706'},
+    {lbl:'Overdue',val:s.overdue,icon:'🚨',col:'#dc2626'},
+  ].map(c=>`<div class="card stat-card"><div class="s-icon">${c.icon}</div><div class="s-num" style="color:${c.col}">${c.val}</div><div class="s-lbl">${c.lbl}</div></div>`).join('');
+
+  // Breakdown
+  document.getElementById('breakdown').innerHTML=['extinguisher','hydrant','hose-reel'].map(t=>{
+    const ta=DB.assets.filter(a=>a.type===t);
+    const ok=ta.filter(a=>a.status==='ok').length;
+    return`<div style="margin-bottom:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:.82rem;font-weight:600;color:var(--dim)">${TI[t]} ${TL[t]}</span>
+        <span style="font-size:.82rem;font-weight:800">${ta.length} <span style="color:#15803d">(${ok} OK)</span></span>
+      </div>
+      <div style="display:flex;height:8px;border-radius:8px;overflow:hidden;background:#e2e8f0">
+        ${['ok','due-soon','overdue'].map(st=>{const n=ta.filter(a=>a.status===st).length;return n?`<div style="width:${Math.round(n/ta.length*100)}%;background:${st==='ok'?'#16a34a':st==='due-soon'?'#d97706':'#dc2626'};transition:width .4s"></div>`:''}).join('')}
+      </div></div>`;
+  }).join('');
+
+  // Monthly chart
+  const months=[];const now=new Date();
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({label:d.toLocaleDateString('en-IN',{month:'short'}),y:d.getFullYear(),m:d.getMonth()});}
+  const monthData=months.map(({label,y,m})=>{
+    const ins=DB.inspections.filter(i=>{const d=new Date(i.date);return d.getFullYear()===y&&d.getMonth()===m;});
+    return{label,count:ins.length,pass:ins.filter(i=>i.passed&&!i.skipped).length};
+  });
+  const maxCount=Math.max(...monthData.map(m=>m.count),1);
+  document.getElementById('monthly-chart').innerHTML=`
+    <div class="chart-bar-wrap">
+      ${monthData.map(m=>`<div class="chart-bar-col">
+        <span class="chart-val">${m.count}</span>
+        <div class="chart-bar" style="height:${Math.round(m.count/maxCount*100)}%;background:${m.count===0?'#e2e8f0':'var(--blue)'};min-height:${m.count?8:4}px"></div>
+        <span class="chart-label">${m.label}</span>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:12px;margin-top:12px;font-size:.7rem;color:var(--muted)">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--blue);margin-right:4px"></span>Total</span>
+    </div>`;
+
+  // Pass/Fail donut (SVG)
+  const total=DB.inspections.length;
+  const pass=DB.inspections.filter(i=>i.passed&&!i.skipped).length;
+  const fail=DB.inspections.filter(i=>!i.passed&&!i.skipped).length;
+  const skip=DB.inspections.filter(i=>i.skipped).length;
+  if(total===0){
+    document.getElementById('pf-chart').innerHTML='<div style="color:var(--muted);font-size:.82rem">No inspection data yet</div>';
+  }else{
+    const r=48,cx=60,cy=60,circ=2*Math.PI*r;
+    const pPct=pass/total,fPct=fail/total,sPct=skip/total;
+    const pDash=pPct*circ,fDash=fPct*circ,sDash=sPct*circ;
+    document.getElementById('pf-chart').innerHTML=`
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="14"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#16a34a" stroke-width="14" stroke-dasharray="${pDash} ${circ}" stroke-dashoffset="${circ/4}" transform="rotate(-90 ${cx} ${cy})"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#dc2626" stroke-width="14" stroke-dasharray="${fDash} ${circ}" stroke-dashoffset="${circ/4-pDash}" transform="rotate(-90 ${cx} ${cy})"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#a5b4fc" stroke-width="14" stroke-dasharray="${sDash} ${circ}" stroke-dashoffset="${circ/4-pDash-fDash}" transform="rotate(-90 ${cx} ${cy})"/>
+        <text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="16" font-weight="800" fill="#0f172a">${total}</text>
+        <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="9" fill="#64748b">total</text>
+      </svg>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="font-size:.78rem;font-weight:700;color:#15803d">✅ Passed: ${pass} (${Math.round(pPct*100)}%)</div>
+        <div style="font-size:.78rem;font-weight:700;color:#dc2626">❌ Failed: ${fail} (${Math.round(fPct*100)}%)</div>
+        <div style="font-size:.78rem;font-weight:700;color:#6366f1">⏭ Skipped: ${skip} (${Math.round(sPct*100)}%)</div>
+      </div>`;
+  }
+
+  // Recent
+  document.getElementById('recent-ins').innerHTML=DB.inspections.slice(0,5).map(ins=>{
+    const a=DB.assets.find(x=>x.id===ins.assetId);
+    return`<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:16px">${a?TI[a.type]:'🔥'}</span>
+      <div style="flex:1"><div style="font-size:.82rem;font-weight:800">${ins.assetId}</div><div style="font-size:.72rem;color:var(--muted)">${ins.date} · ${ins.inspector}</div></div>
+      ${passTag(ins.passed,ins.skipped)}</div>`;
+  }).join('')||(DB.inspections.length===0?'<div style="color:var(--muted);font-size:.82rem">No inspections yet</div>':'');
+
+  // Alerts
+  const bad=DB.assets.filter(a=>a.status!=='ok');
+  document.getElementById('alert-section').innerHTML=bad.length===0?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin-top:16px;text-align:center;color:#15803d;font-weight:700;font-size:.82rem">✅ All assets are compliant</div>`:
+    `<div class="alert-box"><h3>🚨 Action Required (${bad.length} asset${bad.length>1?'s':''})</h3>
+    <div class="alert-grid">${bad.map(a=>`<div class="alert-item">
+      <div><div style="font-weight:800;font-size:.82rem">${TI[a.type]} ${a.id}</div>
+      <div style="font-size:.72rem;color:var(--muted)">${a.location}</div>
+      <div style="font-size:.72rem;font-weight:700;color:${a.status==='overdue'?'#dc2626':'#d97706'}">Due: ${a.nextDue}</div></div>
+    </div>`).join('')}</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ASSETS
+// ═══════════════════════════════════════════════════════
+let fType='all',fStatus='all';
+function renderAssetPage(){
+  updateSidebar();
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  const wrap=document.getElementById('add-asset-btn-wrap');
+  if(wrap)wrap.innerHTML=isAdmin?'<button class="btn btn-red" onclick="openAddModal()">+ Add Asset</button>':'';
+  const fb=document.getElementById('asset-filters');
+  fb.querySelectorAll('.filter-btn').forEach(b=>b.remove());
+  ['all','extinguisher','hydrant','hose-reel'].forEach(t=>{
+    const b=document.createElement('button');b.className='filter-btn'+(fType===t?' active':'');
+    b.textContent=t==='all'?'All Types':t==='extinguisher'?'🧯 Extinguishers':t==='hydrant'?'🔴 Hydrants':'🌀 Hose Reels';
+    b.onclick=()=>{fType=t;renderAssetPage()};fb.appendChild(b);
+  });
+  ['all','ok','due-soon','overdue'].forEach(s=>{
+    const b=document.createElement('button');b.className='filter-btn'+(fStatus===s?' active':'');
+    b.textContent=s==='all'?'All Status':SLBL[s];
+    b.onclick=()=>{fStatus=s;renderAssetPage()};fb.appendChild(b);
+  });
+  renderAssetTable();
+}
+
+function renderAssetTable(){
+  const q=(document.getElementById('search-input')||{}).value||'';
+  const rows=DB.assets.filter(a=>(fType==='all'||a.type===fType)&&(fStatus==='all'||a.status===fStatus)&&(q===''||a.id.toLowerCase().includes(q.toLowerCase())||a.location.toLowerCase().includes(q.toLowerCase())));
+  const tbody=document.getElementById('asset-tbody'),empty=document.getElementById('asset-empty');
+  if(!rows.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  tbody.innerHTML=rows.map((a,i)=>`
+    <tr style="${i%2?'background:#fafafa':''}">
+      <td style="font-weight:800">${a.id}</td>
+      <td><span title="${aLabel(a)}" style="font-size:18px">${aIcon(a)}</span></td>
+      <td style="color:var(--dim)">${a.location}</td>
+      <td style="color:var(--muted);font-size:.72rem">${a.subtype||'—'}</td>
+      <td style="color:var(--muted);font-size:.72rem">${a.installed}</td>
+      <td style="font-size:.72rem;font-weight:${a.status!=='ok'?700:400};color:${a.status==='overdue'?'#dc2626':a.status==='due-soon'?'#d97706':'var(--muted)'}">${a.nextDue}</td>
+      <td>${tagH(a.status)}</td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openDetail('${a.id}')">View</button>
+        ${isAdmin?`<button class="btn btn-blue btn-sm" onclick="openEditModal('${a.id}')">✏️</button>`:''}
+        <button class="btn btn-green btn-sm" onclick="openQR('${a.id}')">QR</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function openDetail(id){
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  document.getElementById('detail-left').innerHTML=`
+    <div class="detail-header">
+      <div style="font-size:38px">${TI[a.type]}</div>
+      <div style="flex:1"><div style="font-family:var(--font-head);font-size:1.2rem;font-weight:700">${a.id}</div><div style="font-size:.75rem;color:var(--muted)">${aLabel(a)}</div></div>
+      ${tagH(a.status)}
+    </div>
+    <div class="detail-rows">
+      <div class="row"><span class="k">Location</span><span class="v">${a.location}</span></div>
+      ${a.subtype?`<div class="row"><span class="k">Subtype / Capacity</span><span class="v">${a.subtype}</span></div>`:''}
+      ${a.installed?`<div class="row"><span class="k">Installed</span><span class="v">${a.installed}</span></div>`:''}
+      ${a.nextDue?`<div class="row"><span class="k">Next Due</span><span class="v" style="color:${a.status==='overdue'?'#dc2626':a.status==='due-soon'?'#d97706':'inherit'}">${a.nextDue}</span></div>`:''}
+      ${(a.customFields||[]).map(f=>`<div class="row"><span class="k">${f.k}</span><span class="v">${f.v}</span></div>`).join('')}
+    </div>
+    <div style="margin-top:16px;text-align:center">
+      <div style="font-size:.7rem;color:var(--muted);font-weight:700;margin-bottom:7px;text-transform:uppercase">QR Code</div>
+      <div id="detail-qr-${a.id}" style="display:flex;justify-content:center;background:#fff;border-radius:8px;padding:11px;border:1px solid var(--border)"></div>
+    </div>
+    ${isAdmin?`<div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-blue" style="flex:1" onclick="openEditModal('${a.id}')">✏️ Edit</button>
+      <button class="btn btn-amber" style="flex:1" onclick="openAddMaintModal('${a.id}')">🔧 Add Maintenance</button>
+    </div>`:''}`;
+  setTimeout(()=>{const t=document.getElementById('detail-qr-'+a.id);if(t)makeQR(t,getAssetUrl(a.id),120)},50);
+  // Maintenance + inspections in detail-right
+  const hist=DB.inspections.filter(i=>i.assetId===id);
+  const maint=(DB.maintenance||[]).filter(m=>m.assetId===id);
+  document.getElementById('detail-right').innerHTML=`
+    <div style="font-family:var(--font-head);font-size:.9rem;font-weight:700;margin-bottom:12px">Inspection History</div>
+    ${hist.length===0?'<div style="color:var(--muted);font-size:.82rem;margin-bottom:16px">No inspections yet</div>':
+    hist.map(ins=>`<div class="ins-card">
+      <div class="top"><span style="font-weight:800;font-size:.72rem">${ins.id}</span>${passTag(ins.passed,ins.skipped)}</div>
+      <div style="font-size:.72rem;color:var(--muted)">📅 ${ins.date} · ${ins.shift||'—'}</div>
+      <div style="font-size:.72rem;color:var(--dim);margin-top:1px">👤 <strong>${ins.inspector}</strong>${ins.role?' · '+ins.role:''}</div>
+      ${ins.remarks?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px;font-style:italic">📝 ${ins.remarks}</div>`:''}
+    </div>`).join('')}
+    <div class="divider"></div>
+    <div style="font-family:var(--font-head);font-size:.9rem;font-weight:700;margin-bottom:12px">Maintenance History</div>
+    ${maint.length===0?'<div style="color:var(--muted);font-size:.82rem">No maintenance records yet</div>':
+    maint.map(m=>`<div class="maint-card">
+      <div class="mc-head"><span class="mc-type">${m.type}</span><span class="mc-date">${m.date}</span></div>
+      <div class="mc-desc">${m.desc}</div>
+      <div class="mc-by">🔧 ${m.by}${m.cost?` · ₹${m.cost}`:''} ${m.nextService?`· Next: ${m.nextService}`:''}</div>
+    </div>`).join('')}`;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+}
+
+// Asset modal
+let editId=null;
+let customFieldCount=0;
+
+function onAssetTypeChange(){
+  const t=document.getElementById('m-type').value;
+  const isGeneric=(t==='generic');
+  const glr=document.getElementById('m-generic-label-row');
+  if(glr)glr.style.display=isGeneric?'block':'none';
+  // Update placeholder on ID field
+  const mid=document.getElementById('m-id');
+  if(mid&&!editId)mid.placeholder=isGeneric?'e.g. FT-001':'e.g. EXT-004';
+}
+
+function addCustomField(key='',val=''){
+  const container=document.getElementById('m-custom-fields');
+  if(!container)return;
+  const idx=customFieldCount++;
+  const div=document.createElement('div');
+  div.className='custom-field-row';
+  div.id='cf-row-'+idx;
+  div.style.cssText='display:flex;gap:7px;margin-bottom:7px;align-items:center';
+  div.innerHTML=`
+    <input class="form-input" placeholder="Field name (e.g. Capacity)" value="${key}" id="cf-k-${idx}" style="flex:1;font-size:.78rem"/>
+    <input class="form-input" placeholder="Value (e.g. 10,000L)" value="${val}" id="cf-v-${idx}" style="flex:1.5;font-size:.78rem"/>
+    <button type="button" onclick="document.getElementById('cf-row-${idx}').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px" title="Remove">✕</button>`;
+  container.appendChild(div);
+}
+
+function getCustomFields(){
+  const fields=[];
+  document.querySelectorAll('[id^="cf-row-"]').forEach(row=>{
+    const idx=row.id.replace('cf-row-','');
+    const k=(document.getElementById('cf-k-'+idx)||{}).value||'';
+    const v=(document.getElementById('cf-v-'+idx)||{}).value||'';
+    if(k.trim())fields.push({k:k.trim(),v:v.trim()});
+  });
+  return fields;
+}
+
+function openAddModal(){
+  editId=null;customFieldCount=0;
+  document.getElementById('asset-modal-title').textContent='➕ Add Asset';
+  document.getElementById('asset-modal-btn').textContent='Add Asset';
+  document.getElementById('m-status-row').style.display='none';
+  document.getElementById('m-type').disabled=false;
+  document.getElementById('m-id').disabled=false;
+  ['m-id','m-loc','m-sub','m-inst','m-due'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const gl=document.getElementById('m-generic-label');if(gl)gl.value='';
+  document.getElementById('m-type').value='extinguisher';
+  document.getElementById('m-generic-label-row').style.display='none';
+  document.getElementById('m-custom-fields').innerHTML='';
+  document.getElementById('asset-modal').classList.add('open');
+}
+function openEditModal(id){
+  editId=id;customFieldCount=0;
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  document.getElementById('asset-modal-title').textContent='✏️ Edit Asset';
+  document.getElementById('asset-modal-btn').textContent='Save Changes';
+  document.getElementById('m-status-row').style.display='block';
+  document.getElementById('m-type').value=a.type;document.getElementById('m-type').disabled=true;
+  document.getElementById('m-id').value=a.id;document.getElementById('m-id').disabled=true;
+  document.getElementById('m-loc').value=a.location;
+  document.getElementById('m-sub').value=a.subtype||'';
+  document.getElementById('m-inst').value=a.installed||'';
+  document.getElementById('m-due').value=a.nextDue||'';
+  document.getElementById('m-status').value=a.status||'ok';
+  const glr=document.getElementById('m-generic-label-row');
+  const gl=document.getElementById('m-generic-label');
+  if(glr)glr.style.display=a.type==='generic'?'block':'none';
+  if(gl)gl.value=a.genericLabel||'';
+  // Restore custom fields
+  document.getElementById('m-custom-fields').innerHTML='';
+  (a.customFields||[]).forEach(f=>addCustomField(f.k,f.v));
+  document.getElementById('asset-modal').classList.add('open');
+}
+function saveAsset(){
+  const type=document.getElementById('m-type').value;
+  const loc=document.getElementById('m-loc').value.trim();
+  const inst=document.getElementById('m-inst').value;
+  const due=document.getElementById('m-due').value;
+  if(!loc){toast('Location is required','err');return;}
+  const genericLabel=type==='generic'?(document.getElementById('m-generic-label').value.trim()||'Other Equipment'):'';
+  const customFields=getCustomFields();
+  if(editId){
+    DB.assets=DB.assets.map(a=>a.id===editId?{
+      ...a,location:loc,subtype:document.getElementById('m-sub').value.trim(),
+      installed:inst,nextDue:due,status:document.getElementById('m-status').value,
+      genericLabel:genericLabel||a.genericLabel,customFields
+    }:a);
+    auditLog('asset_edit',`Edited ${editId}`);toast('✅ Asset updated!');
+  }else{
+    const id=document.getElementById('m-id').value.trim().toUpperCase();
+    if(!id){toast('Asset ID required','err');return;}
+    if(DB.assets.find(a=>a.id===id)){toast('ID already exists','err');return;}
+    DB.assets.push({id,type,location:loc,subtype:document.getElementById('m-sub').value.trim(),
+      installed:inst,nextDue:due,status:'ok',genericLabel,customFields});
+    auditLog('asset_add',`Added ${id} (${type==='generic'?genericLabel:TL[type]}) at "${loc}"`);
+    toast('✅ Asset added!');
+  }
+  fbWriteAssets();closeModal('asset-modal');renderAssetPage();updateSidebar();
+}
+
+// ═══════════════════════════════════════════════════════
+//  MAINTENANCE LOG
+// ═══════════════════════════════════════════════════════
+const MAINT_TYPE_LABELS={service:'Scheduled Service',repair:'Repair',replacement:'Replacement',refill:'Refilling/Recharge',amc:'AMC Visit',other:'Other'};
+const MAINT_TYPE_COLORS={service:'#2563eb',repair:'#dc2626',replacement:'#d97706',refill:'#16a34a',amc:'#6366f1',other:'#64748b'};
+
+function renderMaintenancePage(){
+  const q=(document.getElementById('maint-search')||{}).value||'';
+  const tf=(document.getElementById('maint-type-filter')||{}).value||'';
+  let records=(DB.maintenance||[]).filter(m=>
+    (tf===''||m.type===tf)&&
+    (q===''||m.assetId.toLowerCase().includes(q.toLowerCase())||m.desc.toLowerCase().includes(q.toLowerCase())||m.by.toLowerCase().includes(q.toLowerCase()))
+  ).sort((a,b)=>b.date.localeCompare(a.date));
+  const list=document.getElementById('maint-list'),empty=document.getElementById('maint-empty');
+  if(!records.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=records.map(m=>{
+    const a=DB.assets.find(x=>x.id===m.assetId);
+    return`<div class="maint-card">
+      <div class="mc-head">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-size:18px">${a?TI[a.type]:'🔧'}</span>
+          <div>
+            <div style="font-size:.82rem;font-weight:800;color:var(--text)">${m.assetId} <span style="font-weight:400;color:var(--muted)">${a?'· '+a.location:''}</span></div>
+            <div style="font-size:.7rem;color:var(--muted)">${m.id||''}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="mc-type" style="background:${MAINT_TYPE_COLORS[m.type]||'#64748b'}22;color:${MAINT_TYPE_COLORS[m.type]||'#64748b'};border:1px solid ${MAINT_TYPE_COLORS[m.type]||'#64748b'}44">${MAINT_TYPE_LABELS[m.type]||m.type}</span>
+          <span class="mc-date">📅 ${m.date}</span>
+          ${currentUser&&currentUser.role==='admin'?`<button class="btn btn-danger btn-sm" onclick="deleteMaintRecord('${m.id}')">🗑</button>`:''}
+        </div>
+      </div>
+      <div class="mc-desc" style="margin-top:8px">${m.desc}</div>
+      <div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap">
+        <span class="mc-by">🔧 ${m.by}</span>
+        ${m.cost?`<span class="mc-by">💰 ₹${Number(m.cost).toLocaleString()}</span>`:''}
+        ${m.nextService?`<span class="mc-by">📅 Next: ${m.nextService}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let maintEditId=null;
+function openAddMaintModal(assetId=''){
+  document.getElementById('maint-modal-title').textContent='Add Maintenance Record';
+  const sel=document.getElementById('mm-asset');
+  sel.innerHTML=DB.assets.map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${TI[a.type]} ${a.id} — ${a.location}</option>`).join('');
+  document.getElementById('mm-date').value=new Date().toISOString().split('T')[0];
+  ['mm-type','mm-next','mm-by','mm-desc','mm-cost'].forEach(id=>{const e=document.getElementById(id);if(e&&id!=='mm-type')e.value='';});
+  document.getElementById('maint-modal').classList.add('open');
+}
+function saveMaintRecord(){
+  const assetId=document.getElementById('mm-asset').value;
+  const type=document.getElementById('mm-type').value;
+  const date=document.getElementById('mm-date').value;
+  const by=document.getElementById('mm-by').value.trim();
+  const desc=document.getElementById('mm-desc').value.trim();
+  if(!assetId||!date||!by||!desc){toast('Fill all required fields','err');return;}
+  const record={
+    id:'MNT-'+String(Date.now()).slice(-6),
+    assetId,type,date,
+    nextService:document.getElementById('mm-next').value,
+    by,desc,
+    cost:document.getElementById('mm-cost').value||0,
+  };
+  if(!DB.maintenance)DB.maintenance=[];
+  DB.maintenance.unshift(record);
+  fbWriteMaintenance();fbWriteAssets();auditLog('maintenance',`${type} for ${assetId} by ${by}`);
+  toast('✅ Maintenance record saved!');
+  closeModal('maint-modal');renderMaintenancePage();
+}
+function deleteMaintRecord(id){
+  if(!confirm('Delete this maintenance record?'))return;
+  DB.maintenance=(DB.maintenance||[]).filter(m=>m.id!==id);
+  fbWriteMaintenance();renderMaintenancePage();toast('Record deleted','warn');
+}
+
+// ═══════════════════════════════════════════════════════
+//  INSPECTIONS — Unified Workspace (v9)
+// ═══════════════════════════════════════════════════════
+let setupSelectedIds = new Set();  // during setup
+let setupTypeTab = 'all';
+let addMoreTypeTab = 'all';
+let addMoreNewIds = new Set();
+let activeAssetId = null;          // which asset is open in checklist
+
+// ── Render entry point ─────────────────────────────────
+function renderInspPage() {
+  updateSidebar();
+  if (DB.session) {
+    showSessionMode();
+    renderSessionWorkspace();
+  } else {
+    showSetupMode();
+  }
+}
+
+function showSetupMode() {
+  document.getElementById('insp-setup-mode').style.display = 'block';
+  document.getElementById('insp-session-mode').style.display = 'none';
+  document.getElementById('insp-summary-mode').style.display = 'none';
+  setupSelectedIds = new Set();
+  if (currentUser && currentUser.role === 'inspector') {
+    document.getElementById('sess-name').value = currentUser.name;
+    document.getElementById('sess-role').value = currentUser.role === 'inspector' ? 'Inspector' : '';
+  }
+  document.getElementById('sess-date').value = new Date().toISOString().split('T')[0];
+  renderSetupAssetBrowser();
+  checkSetupReady();
+}
+
+function showSessionMode() {
+  document.getElementById('insp-setup-mode').style.display = 'none';
+  document.getElementById('insp-session-mode').style.display = 'block';
+  document.getElementById('insp-summary-mode').style.display = 'none';
+}
+
+function showSummaryMode() {
+  document.getElementById('insp-setup-mode').style.display = 'none';
+  document.getElementById('insp-session-mode').style.display = 'none';
+  document.getElementById('insp-summary-mode').style.display = 'block';
+}
+
+// ── Setup: asset browser ───────────────────────────────
+function setSetupTypeTab(type, btn) {
+  setupTypeTab = type;
+  document.querySelectorAll('#setup-type-tabs .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSetupAssetBrowser();
+}
+
+function renderSetupAssetBrowser() {
+  const q = (document.getElementById('setup-search') || {}).value || '';
+  const assets = DB.assets.filter(a =>
+    (setupTypeTab === 'all' || a.type === setupTypeTab) &&
+    (q === '' || a.id.toLowerCase().includes(q.toLowerCase()) || a.location.toLowerCase().includes(q.toLowerCase()))
+  );
+  const sc = {ok:'#16a34a','due-soon':'#d97706',overdue:'#dc2626'};
+  const sb = {ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+  document.getElementById('setup-asset-browser').innerHTML = assets.map(a => {
+    const sel = setupSelectedIds.has(a.id);
+    return `<div class="setup-asset-card ${sel ? 'selected' : ''}" id="sac-${a.id}" onclick="toggleSetupAsset('${a.id}')">
+      <div class="sac-check">✅</div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="font-size:22px">${TI[a.type]}</span>
+        <div>
+          <div class="sac-id">${a.id}</div>
+          <div class="sac-type">${aLabel(a)}${a.subtype ? ' · ' + a.subtype : ''}</div>
+        </div>
+        <span style="margin-left:auto;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:20px;background:${sb[a.status]};color:${sc[a.status]}">${SLBL[a.status]}</span>
+      </div>
+      <div class="sac-loc">📍 ${a.location}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSetupAsset(id) {
+  if (setupSelectedIds.has(id)) setupSelectedIds.delete(id);
+  else setupSelectedIds.add(id);
+  const c = document.getElementById('sac-' + id);
+  if (c) c.classList.toggle('selected', setupSelectedIds.has(id));
+  renderSetupPreview();
+  checkSetupReady();
+}
+
+function setupSelectAll() {
+  const q = (document.getElementById('setup-search') || {}).value || '';
+  DB.assets.filter(a => (setupTypeTab === 'all' || a.type === setupTypeTab) && (q === '' || a.id.toLowerCase().includes(q.toLowerCase()) || a.location.toLowerCase().includes(q.toLowerCase()))).forEach(a => setupSelectedIds.add(a.id));
+  renderSetupAssetBrowser(); renderSetupPreview(); checkSetupReady();
+}
+function setupSelectOverdue() {
+  DB.assets.filter(a => a.status === 'overdue').forEach(a => setupSelectedIds.add(a.id));
+  renderSetupAssetBrowser(); renderSetupPreview(); checkSetupReady();
+}
+function setupSelectDueSoon() {
+  DB.assets.filter(a => a.status === 'due-soon').forEach(a => setupSelectedIds.add(a.id));
+  renderSetupAssetBrowser(); renderSetupPreview(); checkSetupReady();
+}
+function setupClearAll() {
+  setupSelectedIds = new Set();
+  renderSetupAssetBrowser(); renderSetupPreview(); checkSetupReady();
+}
+
+function renderSetupPreview() {
+  const n = setupSelectedIds.size;
+  const badge = document.getElementById('setup-count-badge');
+  if (badge) badge.textContent = n;
+  const preview = document.getElementById('setup-selected-preview');
+  if (!preview) return;
+  if (n === 0) {
+    preview.innerHTML = '<div id="setup-preview-empty" style="font-size:.78rem;color:var(--muted);padding:8px 0">No assets selected yet. Pick from the panel →</div>';
+    return;
+  }
+  preview.innerHTML = [...setupSelectedIds].map(id => {
+    const a = DB.assets.find(x => x.id === id);
+    return `<div class="setup-preview-pill">
+      <span class="spp-icon">${a ? TI[a.type] : '🔥'}</span>
+      <div class="spp-text"><div class="st-id">${id}</div><div class="st-loc">${a ? a.location : ''}</div></div>
+      <button class="spp-remove" onclick="removeSetupAsset('${id}')" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function removeSetupAsset(id) {
+  setupSelectedIds.delete(id);
+  const c = document.getElementById('sac-' + id);
+  if (c) c.classList.remove('selected');
+  renderSetupPreview(); checkSetupReady();
+}
+
+function checkSetupReady() {
+  const name = (document.getElementById('sess-name') || {}).value || '';
+  const date = (document.getElementById('sess-date') || {}).value || '';
+  const btn = document.getElementById('btn-start-insp');
+  if (btn) btn.disabled = !(name.trim() && date && setupSelectedIds.size > 0);
+}
+
+// ── Start inspection ───────────────────────────────────
+function startInspection() {
+  const name = document.getElementById('sess-name').value.trim();
+  const role = document.getElementById('sess-role').value.trim();
+  const date = document.getElementById('sess-date').value;
+  const shift = document.getElementById('sess-shift').value;
+  if (!name || !date || !setupSelectedIds.size) { toast('Fill name, date and pick at least one asset', 'err'); return; }
+  const assetIds = [...setupSelectedIds];
+  DB.session = {
+    inspectorName: name, role, date, shift,
+    assetIds,
+    currentIndex: 0,
+    results: [],
+    clStates: {},  // {assetId: {0:true/false/null, ...}}
+    activeId: assetIds[0],
+  };
+  initClForAsset(assetIds[0]);
+  activeAssetId = assetIds[0];
+  fbWriteSession();fbWriteAssets(); updateSidebar();
+  showSessionMode();
+  renderSessionWorkspace();
+  toast('✅ Inspection session started!');
+}
+
+// ── Session workspace ──────────────────────────────────
+function renderSessionWorkspace() {
+  const s = DB.session; if (!s) return;
+  const total = s.assetIds.length;
+  const done = s.results.length;
+  const pass = s.results.filter(r => r.passed && !r.skipped).length;
+  const fail = s.results.filter(r => !r.passed && !r.skipped).length;
+  const skip = s.results.filter(r => r.skipped).length;
+  const pending = total - done;
+
+  // Header info bar
+  const infoBar = document.getElementById('sess-info-bar');
+  if (infoBar) infoBar.textContent =
+    `👤 ${s.inspectorName}${s.role ? ' · ' + s.role : ''} · 📅 ${s.date} · ${s.shift} Shift`;
+
+  // Stats
+  const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setEl('sess-prog-label', `${done} / ${total} done`);
+  setEl('sess-pass-count', `✅ ${pass}`);
+  setEl('sess-fail-count', `❌ ${fail}`);
+  setEl('sess-skip-count', `⏭ ${skip}`);
+  setEl('sess-pending-count', `⏳ ${pending} pending`);
+
+  // Progress bar
+  const s4bar = document.getElementById('s4-bar');
+  if (s4bar) s4bar.style.width = total ? Math.round(done / total * 100) + '%' : '0%';
+
+  // Rail dots
+  const rail = document.getElementById('asset-rail');
+  if (rail) rail.innerHTML = s.assetIds.map(id => {
+    const r = s.results.find(x => x.assetId === id);
+    const a = DB.assets.find(x => x.id === id);
+    let cls = '', sym = TI[a ? a.type : 'extinguisher'] || '●';
+    if (r) {
+      cls = r.skipped ? 'r-skip' : r.passed ? 'r-pass' : 'r-fail';
+      sym = r.skipped ? '⏭' : r.passed ? '✓' : '✗';
+    } else if (id === activeAssetId) cls = 'r-cur';
+    return `<div class="rail-dot ${cls}" onclick="jumpToAsset('${id}')" title="${id}">
+      <div class="dot-tip">${id}</div>${sym}</div>`;
+  }).join('');
+
+  // Queue label
+  const qLabel = document.getElementById('queue-count-label');
+  if (qLabel) qLabel.textContent = `${total} asset${total !== 1 ? 's' : ''}`;
+
+  // Asset queue
+  const qList = document.getElementById('asset-queue-list');
+  if (qList) qList.innerHTML = s.assetIds.map(id => {
+    const r = s.results.find(x => x.assetId === id);
+    const a = DB.assets.find(x => x.id === id);
+    const isActive = id === activeAssetId;
+    let cls = 'qi-pending', statusIcon = '⏳';
+    if (isActive) { cls = 'qi-active'; statusIcon = '▶'; }
+    else if (r) {
+      if (r.skipped) { cls = 'qi-done-skip'; statusIcon = '⏭'; }
+      else if (r.passed) { cls = 'qi-done-pass'; statusIcon = '✅'; }
+      else { cls = 'qi-done-fail'; statusIcon = '❌'; }
+    }
+    return `<div class="queue-item ${cls}" onclick="jumpToAsset('${id}')">
+      <span class="qi-icon">${a ? TI[a.type] : '🔥'}</span>
+      <div class="qi-info">
+        <div class="qi-id">${id}</div>
+        <div class="qi-loc">${a ? a.location : ''}</div>
+      </div>
+      <span class="qi-status">${statusIcon}</span>
+    </div>`;
+  }).join('');
+
+  // Active checklist
+  renderActiveChecklist();
+}
+
+function jumpToAsset(id) {
+  const s = DB.session; if (!s) return;
+  // Allow jumping to any undone asset, or re-view done ones
+  activeAssetId = id;
+  s.activeId = id;
+  if (!s.clStates[id]) initClForAsset(id);
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+  renderSessionWorkspace();
+}
+
+function initClForAsset(id) {
+  const s = DB.session; if (!s) return;
+  const a = DB.assets.find(x => x.id === id); if (!a) return;
+  if (!s.clStates[id]) {
+    s.clStates[id] = {};
+    CL[a.type].forEach((_, i) => s.clStates[id][i] = null);
+  }
+}
+
+function renderActiveChecklist() {
+  const s = DB.session; if (!s) return;
+  const id = activeAssetId; if (!id) return;
+  const a = DB.assets.find(x => x.id === id);
+  const done = s.results.find(r => r.assetId === id);
+  const area = document.getElementById('active-checklist-area');
+  if (!area) return;
+
+  if (done) {
+    // Show read-only result for completed asset
+    const sc = {ok:'#16a34a','due-soon':'#d97706',overdue:'#dc2626'};
+    area.innerHTML = `<div class="card">
+      <div class="insp-card-head">
+        <span style="font-size:34px">${a ? TI[a.type] : '🔥'}</span>
+        <div style="flex:1"><div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700">${id}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${a ? a.location : ''}</div></div>
+        ${passTag(done.passed, done.skipped)}
+      </div>
+      <div class="insp-card-body">
+        <div class="${done.skipped ? 'checklist-fail-banner' : done.passed ? 'checklist-done-banner' : 'checklist-fail-banner'}">
+          <div style="font-size:28px;margin-bottom:5px">${done.skipped ? '⏭' : done.passed ? '✅' : '❌'}</div>
+          <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:${done.skipped ? '#6366f1' : done.passed ? '#15803d' : '#dc2626'}">${done.skipped ? 'Skipped' : done.passed ? 'All Checks Passed' : 'Failed Inspection'}</div>
+          ${done.remarks ? `<div style="font-size:.78rem;color:var(--dim);margin-top:6px">📝 ${done.remarks}</div>` : ''}
+        </div>
+        ${getPendingAsset() ? `<button class="btn btn-red btn-full" onclick="jumpToAsset('${getPendingAsset()}')">▶ Next Pending Asset</button>` :
+          `<button class="btn btn-red btn-full" onclick="finishSession()">🏁 Finish Inspection</button>`}
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="reopenAsset('${id}')">🔄 Re-inspect this asset</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  if (!a) { area.innerHTML = '<div style="color:var(--muted)">Asset not found</div>'; return; }
+  const clState = s.clStates[id] || {};
+  const items = CL[a.type] || [];
+  const answered = Object.values(clState).filter(v => v !== null).length;
+  const allDone = answered === items.length && items.length > 0;
+  const allPass = allDone && Object.values(clState).every(v => v === true);
+  const sc = {ok:'#16a34a','due-soon':'#d97706',overdue:'#dc2626'};
+  const sb = {ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+
+  area.innerHTML = `<div class="card ani">
+    <div class="insp-card-head">
+      <span style="font-size:36px">${TI[a.type]}</span>
+      <div style="flex:1">
+        <div style="font-family:var(--font-head);font-size:1.15rem;font-weight:700">${a.id}</div>
+        <div style="font-size:.75rem;color:var(--muted)">${a.location}${a.subtype ? ' · ' + a.subtype : ''}</div>
+      </div>
+      <span style="font-size:.68rem;font-weight:800;padding:3px 10px;border-radius:20px;background:${sb[a.status]};color:${sc[a.status]}">${SLBL[a.status]}</span>
+    </div>
+    <div class="insp-card-body">
+      <!-- Inspector lock strip -->
+      <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:14px">
+        <span>🔒</span>
+        <span style="font-size:.78rem;font-weight:700;color:#15803d">👤 ${s.inspectorName}${s.role ? ' · ' + s.role : ''}</span>
+        <span style="margin-left:auto;font-size:.72rem;color:var(--muted)">📅 ${s.date} · ${s.shift}</span>
+      </div>
+
+      <!-- Checklist progress -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-family:var(--font-head);font-size:.9rem;font-weight:700">Inspection Checklist</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:.72rem;color:var(--muted);font-weight:700">${answered}/${items.length} done · ${Math.round(answered/items.length*100)||0}%</span>
+          <button class="all-ok-btn" onclick="markAllOK('${id}')" title="Mark all items as OK">✅ All OK</button>
+        </div>
+      </div>
+
+      <!-- Checklist items -->
+      <div id="cl-items-v2" style="margin-bottom:14px">
+        ${items.map((item, i) => {
+          const v = clState[i];
+          return `<div class="cl-item-v2 ${v === true ? 's-ok' : v === false ? 's-fail' : ''}" id="clv2-${id}-${i}">
+            <div class="cl-num-v2 ${v === true ? 'cn-ok' : v === false ? 'cn-fail' : ''}">${v === true ? '✓' : v === false ? '✗' : i+1}</div>
+            <span class="cl-text-v2">${item}</span>
+            <div class="cl-actions">
+              <button class="cl-ok-btn ${v === true ? 'active' : ''}" onclick="setCLv2('${id}',${i},true)">✅ OK</button>
+              <button class="cl-fail-btn ${v === false ? 'active' : ''}" onclick="setCLv2('${id}',${i},false)">❌ Fail</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <!-- Progress bar -->
+      <div class="prog-wrap">
+        <div class="prog-label"><span>Checklist</span><span id="cl-pct">${Math.round(answered/items.length*100)||0}%</span></div>
+        <div class="prog-track"><div class="prog-fill" id="cl-bar" style="width:${Math.round(answered/items.length*100)||0}%"></div></div>
+      </div>
+
+      <!-- Remarks -->
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Remarks / Observations</label>
+        <textarea class="form-input" id="asset-remarks" rows="2" placeholder="Defects noted, corrective action required…" style="resize:vertical">${s.remarksDraft && s.remarksDraft[id] ? s.remarksDraft[id] : ''}</textarea>
+      </div>
+
+      <!-- Action buttons -->
+      ${allDone ? `<div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="skipAsset()">⏭ Skip Asset</button>
+        <button class="btn ${allPass ? 'btn-green' : 'btn-red'}" style="flex:2;padding:11px;font-size:.88rem" onclick="submitAsset()">
+          ${allPass ? '✅ Submit — All Pass' : '⚠️ Submit — Has Failures'} →
+        </button>
+      </div>` : `<div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="skipAsset()">⏭ Skip Asset</button>
+        <button class="btn btn-ghost" style="flex:2;padding:11px;opacity:.5" disabled>${items.length - answered} item${items.length-answered !== 1 ? 's' : ''} remaining</button>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+function setCLv2(assetId, i, val) {
+  const s = DB.session; if (!s) return;
+  if (!s.clStates[assetId]) initClForAsset(assetId);
+  s.clStates[assetId][i] = val;
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+  // Partial re-render of just the checklist item and progress for speed
+  const item = document.getElementById(`clv2-${assetId}-${i}`);
+  if (item) {
+    item.className = `cl-item-v2 ${val === true ? 's-ok' : 's-fail'}`;
+    const num = item.querySelector('.cl-num-v2');
+    if (num) { num.className = `cl-num-v2 ${val === true ? 'cn-ok' : 'cn-fail'}`; num.textContent = val === true ? '✓' : '✗'; }
+    const okBtn = item.querySelector('.cl-ok-btn');
+    const failBtn = item.querySelector('.cl-fail-btn');
+    if (okBtn) okBtn.classList.toggle('active', val === true);
+    if (failBtn) failBtn.classList.toggle('active', val === false);
+  }
+  // Update progress
+  const a2 = DB.assets.find(x => x.id === assetId);
+  const items = a2 ? CL[a2.type] : [];
+  const answered = Object.values(s.clStates[assetId]).filter(v => v !== null).length;
+  const pct = items.length ? Math.round(answered / items.length * 100) : 0;
+  const bar = document.getElementById('cl-bar'); if (bar) bar.style.width = pct + '%';
+  const pctEl = document.getElementById('cl-pct'); if (pctEl) pctEl.textContent = pct + '%';
+  // If all done, re-render to show submit button
+  if (answered === items.length) renderActiveChecklist();
+}
+
+function markAllOK(assetId) {
+  const s = DB.session; if (!s) return;
+  const a = DB.assets.find(x => x.id === assetId); if (!a) return;
+  if (!s.clStates[assetId]) initClForAsset(assetId);
+  CL[a.type].forEach((_, i) => s.clStates[assetId][i] = true);
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+  renderActiveChecklist();
+  renderSessionWorkspace();
+}
+
+function getPendingAsset() {
+  const s = DB.session; if (!s) return null;
+  return s.assetIds.find(id => !s.results.find(r => r.assetId === id) && id !== activeAssetId) || null;
+}
+
+function reopenAsset(id) {
+  const s = DB.session; if (!s) return;
+  s.results = s.results.filter(r => r.assetId !== id);
+  // Remove from inspection log too
+  DB.inspections = DB.inspections.filter(i => !(i.assetId === id && i.date === s.date && i.inspector === s.inspectorName));
+  s.clStates[id] = {};
+  const a = DB.assets.find(x => x.id === id);
+  if (a) CL[a.type].forEach((_, i) => s.clStates[id][i] = null);
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession(); renderSessionWorkspace();
+  toast(`🔄 ${id} reopened for re-inspection`);
+}
+
+function submitAsset() {
+  const s = DB.session; if (!s) return;
+  const id = activeAssetId; if (!id) return;
+  const clState = s.clStates[id] || {};
+  const a = DB.assets.find(x => x.id === id);
+  const items = a ? CL[a.type] : [];
+  if (Object.values(clState).some(v => v === null)) { toast('Complete all checklist items first', 'err'); return; }
+  const passed = Object.values(clState).every(v => v === true);
+  // Save remarks draft then clear
+  const remarkEl = document.getElementById('asset-remarks');
+  const remarks = remarkEl ? remarkEl.value.trim() : '';
+  if (!s.remarksDraft) s.remarksDraft = {};
+  delete s.remarksDraft[id];
+
+  s.results.push({ assetId: id, passed, skipped: false, remarks });
+  DB.inspections.unshift({
+    id: 'INS-' + String(Date.now()).slice(-6),
+    assetId: id, date: s.date, inspector: s.inspectorName,
+    role: s.role, shift: s.shift, passed, skipped: false,
+    remarks: remarks || (passed ? 'All checks passed' : 'One or more items failed'),
+  });
+  DB.assets = DB.assets.map(a => a.id === id ? { ...a, status: passed ? 'ok' : 'overdue' } : a);
+  auditLog('inspection', `${passed ? 'PASS' : 'FAIL'} — ${id} by ${s.inspectorName}`);
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+  toast(passed ? `✅ ${id} — PASS` : `⚠️ ${id} — FAIL`, passed ? 'ok' : 'warn');
+
+  // Auto-jump to next pending
+  const next = getPendingAsset();
+  if (next) {
+    activeAssetId = next;
+    s.activeId = next;
+    if (!s.clStates[next]) initClForAsset(next);
+    fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+    renderSessionWorkspace();
+  } else if (s.results.length === s.assetIds.length) {
+    finishSession();
+  } else {
+    renderSessionWorkspace();
+  }
+}
+
+function skipAsset() {
+  const s = DB.session; if (!s) return;
+  const id = activeAssetId; if (!id) return;
+  const remarkEl = document.getElementById('asset-remarks');
+  const remarks = remarkEl ? remarkEl.value.trim() : '';
+  s.results.push({ assetId: id, passed: false, skipped: true, remarks: remarks || 'Skipped' });
+  DB.inspections.unshift({
+    id: 'INS-' + String(Date.now()).slice(-6),
+    assetId: id, date: s.date, inspector: s.inspectorName,
+    role: s.role, shift: s.shift, passed: false, skipped: true,
+    remarks: remarks || 'Skipped',
+  });
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+  toast(`⏭ ${id} skipped`, 'warn');
+  const next = getPendingAsset();
+  if (next) {
+    activeAssetId = next; s.activeId = next;
+    if (!s.clStates[next]) initClForAsset(next);
+    fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession(); renderSessionWorkspace();
+  } else if (s.results.length === s.assetIds.length) {
+    finishSession();
+  } else {
+    renderSessionWorkspace();
+  }
+}
+
+function finishSession() {
+  renderSummary();
+}
+
+function confirmFinishEarly() {
+  const s = DB.session; if (!s) return;
+  const undone = s.assetIds.filter(id => !s.results.find(r => r.assetId === id));
+  if (undone.length > 0) {
+    if (!confirm(`${undone.length} asset${undone.length > 1 ? 's' : ''} not yet inspected. Finish session anyway?`)) return;
+  }
+  finishSession();
+}
+
+function renderSummary() {
+  const s = DB.session; if (!s) return;
+  showSummaryMode();
+  const pass = s.results.filter(r => r.passed && !r.skipped).length;
+  const fail = s.results.filter(r => !r.passed && !r.skipped).length;
+  const skip = s.results.filter(r => r.skipped).length;
+  const undone = s.assetIds.filter(id => !s.results.find(r => r.assetId === id)).length;
+  document.getElementById('summ-sub').textContent = `${s.inspectorName} · ${s.date} · ${s.shift} · ${s.assetIds.length} assets`;
+  document.getElementById('summ-stats').innerHTML = [
+    { n: pass, l: 'Passed', c: '#15803d', bg: '#f0fdf4', br: '#bbf7d0' },
+    { n: fail, l: 'Failed', c: '#dc2626', bg: '#fff5f5', br: '#fecaca' },
+    { n: skip, l: 'Skipped', c: '#d97706', bg: '#fffbeb', br: '#fcd34d' },
+    { n: undone, l: 'Not Done', c: '#6366f1', bg: '#eef2ff', br: '#c7d2fe' },
+  ].map(x => `<div class="summary-stat" style="background:${x.bg};border-color:${x.br}">
+    <div class="ss-num" style="color:${x.c}">${x.n}</div>
+    <div class="ss-lbl" style="color:${x.c}">${x.l}</div></div>`).join('');
+  document.getElementById('summ-rows').innerHTML = s.assetIds.map(id => {
+    const r = s.results.find(x => x.assetId === id);
+    const a = DB.assets.find(x => x.id === id);
+    return `<div class="sess-row ${!r ? '' : r.skipped ? 's-skip' : r.passed ? 's-pass' : 's-fail'}">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span style="font-size:18px">${a ? TI[a.type] : '🔥'}</span>
+        <div><div style="font-weight:800;font-size:.82rem">${id}</div><div style="font-size:.72rem;color:var(--muted)">${a ? a.location : ''}</div></div>
+      </div>
+      <div style="text-align:right">${r ? passTag(r.passed, r.skipped) : '<span class="tag tag-skip">NOT DONE</span>'}
+        ${r && r.remarks ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px">${r.remarks}</div>` : ''}</div>
+    </div>`;
+  }).join('');
+  DB.session = null;
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession(); updateSidebar();
+}
+
+function printSessionSummary() {
+  // delegate to existing printSummary logic
+  printSummary();
+}
+
+function resetAndNewSession() { DB.session = null; fbWriteSession(); updateSidebar(); renderInspPage(); }
+
+// ── Add more assets mid-session ────────────────────────
+let addMoreSelectedIds = new Set();
+function openAddMoreModal() {
+  addMoreSelectedIds = new Set();
+  const s = DB.session; if (!s) return;
+  setAddMoreTab('all', document.querySelector('#add-more-modal .filter-btn'));
+  renderAddMoreGrid();
+  document.getElementById('add-more-modal').classList.add('open');
+}
+
+function setAddMoreTab(type, btn) {
+  addMoreTypeTab = type;
+  document.querySelectorAll('#add-more-modal .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderAddMoreGrid();
+}
+
+function renderAddMoreGrid() {
+  const s = DB.session; if (!s) return;
+  const existing = new Set(s.assetIds);
+  const assets = DB.assets.filter(a => !existing.has(a.id) && (addMoreTypeTab === 'all' || a.type === addMoreTypeTab));
+  const sc = {ok:'#16a34a','due-soon':'#d97706',overdue:'#dc2626'};
+  const sb = {ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+  document.getElementById('add-more-grid').innerHTML = assets.length === 0
+    ? '<div style="color:var(--muted);font-size:.82rem;grid-column:1/-1;padding:16px">All assets of this type are already in the session.</div>'
+    : assets.map(a => `<div class="ap-card ${addMoreSelectedIds.has(a.id) ? 'selected' : ''}" id="amc-${a.id}" onclick="toggleAddMore('${a.id}')">
+      <div class="ap-check">✅</div>
+      <div class="ap-id">${TI[a.type]} ${a.id}</div>
+      <div class="ap-loc">📍 ${a.location}</div>
+      <div style="margin-top:5px"><span style="font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:20px;background:${sb[a.status]};color:${sc[a.status]}">${SLBL[a.status]}</span></div>
+    </div>`).join('');
+  updateAddMoreCount();
+}
+
+function toggleAddMore(id) {
+  if (addMoreSelectedIds.has(id)) addMoreSelectedIds.delete(id);
+  else addMoreSelectedIds.add(id);
+  const c = document.getElementById('amc-' + id);
+  if (c) c.classList.toggle('selected', addMoreSelectedIds.has(id));
+  updateAddMoreCount();
+}
+
+function updateAddMoreCount() {
+  const n = addMoreSelectedIds.size;
+  document.getElementById('add-more-count').textContent = `${n} asset${n !== 1 ? 's' : ''} selected`;
+}
+
+function confirmAddMore() {
+  if (!addMoreSelectedIds.size) { toast('Select at least one asset', 'err'); return; }
+  const s = DB.session; if (!s) return;
+  [...addMoreSelectedIds].forEach(id => {
+    s.assetIds.push(id);
+    initClForAsset(id);
+  });
+  fbWriteAssets();fbWriteInspections();fbWriteMaintenance();fbWriteSession();
+  closeModal('add-more-modal');
+  toast(`✅ ${addMoreSelectedIds.size} asset${addMoreSelectedIds.size > 1 ? 's' : ''} added to session!`);
+  renderSessionWorkspace();
+}
+
+// ── Legacy stubs (keep for compatibility) ─────────────
+function resumeActiveSession() { renderInspPage(); }
+function gotoStep2() {}
+function gotoStep1() {}
+function gotoStep3Insp() {}
+function gotoStep2back() {}
+function checkStep3() {}
+function startSession() {}
+function renderStep4() {}
+function renderTypeCards() {}
+function renderAssetPicker() {}
+function updateSelCount() {}
+function toggleAP() {}
+function selectAllAssets() {}
+function clearAssetSelection() {}
+
+// ═══════════════════════════════════════════════════════
+//  INSPECTION LOG
+// ═══════════════════════════════════════════════════════
+function renderLogPage(){
+  const q=(document.getElementById('log-search')||{}).value||'';
+  const rf=(document.getElementById('log-filter-result')||{}).value||'';
+  let ins=DB.inspections.filter(i=>{
+    const matchQ=q===''||i.assetId.toLowerCase().includes(q.toLowerCase())||i.inspector.toLowerCase().includes(q.toLowerCase());
+    const matchR=rf===''||(rf==='pass'&&i.passed&&!i.skipped)||(rf==='fail'&&!i.passed&&!i.skipped)||(rf==='skip'&&i.skipped);
+    return matchQ&&matchR;
+  });
+  const all=DB.inspections;
+  const pass=all.filter(i=>i.passed&&!i.skipped).length;
+  const fail=all.filter(i=>!i.passed&&!i.skipped).length;
+  document.getElementById('ins-stats').innerHTML=[
+    {l:'Total',v:all.length,c:'#6366f1'},{l:'Passed',v:pass,c:'#16a34a'},{l:'Failed',v:fail,c:'#dc2626'},{l:'Pass Rate',v:all.length?Math.round(pass/all.length*100)+'%':'—',c:'#d97706'},
+  ].map(s=>`<div class="card stat-card" style="text-align:center"><div class="s-num" style="color:${s.c}">${s.v}</div><div class="s-lbl">${s.l}</div></div>`).join('');
+  const tbody=document.getElementById('ins-tbody'),empty=document.getElementById('ins-empty');
+  if(!ins.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  tbody.innerHTML=ins.map((i,idx)=>{
+    const a=DB.assets.find(x=>x.id===i.assetId);
+    return`<tr style="${idx%2?'background:#fafafa':''}">
+      <td style="font-weight:800;font-size:.72rem">${i.id}</td>
+      <td>${a?TI[a.type]:'🔥'} ${i.assetId}</td>
+      <td style="color:var(--muted)">${i.date}</td>
+      <td style="font-weight:700">👤 ${i.inspector}</td>
+      <td style="color:var(--muted);font-size:.72rem">${i.role||'—'}</td>
+      <td style="color:var(--muted);font-size:.72rem">${i.shift||'—'}</td>
+      <td>${passTag(i.passed,i.skipped)}</td>
+      <td style="color:var(--muted);font-size:.72rem;max-width:180px">${i.remarks||'—'}</td>
+      <td>${isAdmin?`<button class="btn btn-danger btn-sm" onclick="deleteInspection('${i.id}')">🗑</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="printInspCard('${i.id}')">🖨</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function deleteInspection(id){
+  if(!confirm('Delete this inspection record?'))return;
+  DB.inspections=DB.inspections.filter(i=>i.id!==id);fbWriteInspections();renderLogPage();toast('Record deleted','warn');
+}
+function printInspCard(id){
+  const ins=DB.inspections.find(x=>x.id===id);if(!ins)return;
+  const a=DB.assets.find(x=>x.id===ins.assetId);
+  const res=ins.skipped?'SKIPPED':ins.passed?'✅ PASS':'❌ FAIL';
+  const rc=ins.skipped?'#6366f1':ins.passed?'#16a34a':'#dc2626';
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Inspection ${ins.id}</title>
+  <style>body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}h1{font-size:20px;margin-bottom:4px}
+  .badge{display:inline-block;padding:4px 14px;border-radius:20px;font-weight:800;font-size:14px;background:${ins.passed?'#dcfce7':ins.skipped?'#e0e7ff':'#fee2e2'};color:${rc}}
+  table{width:100%;border-collapse:collapse;margin-top:16px}td{padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px}td:first-child{color:#64748b;width:40%}
+  .footer{margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8}</style></head><body>
+  <h1>🔥 Inspection Report</h1>
+  <div><span class="badge">${res}</span></div>
+  <table>
+    <tr><td>Inspection ID</td><td><strong>${ins.id}</strong></td></tr>
+    <tr><td>Asset</td><td><strong>${ins.assetId}</strong>${a?' — '+a.location:''}</td></tr>
+    <tr><td>Type</td><td>${a?aLabel(a):'—'}</td></tr>
+    <tr><td>Inspector</td><td>${ins.inspector}</td></tr>
+    <tr><td>Designation</td><td>${ins.role||'—'}</td></tr>
+    <tr><td>Date</td><td>${ins.date}</td></tr>
+    <tr><td>Shift</td><td>${ins.shift||'—'}</td></tr>
+    <tr><td>Remarks</td><td>${ins.remarks||'—'}</td></tr>
+  </table>
+  <div class="footer">Generated by ${S.brand||'FireSafe'} Portal · ${new Date().toLocaleString()}</div>
+  </body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  REPORTS
+// ═══════════════════════════════════════════════════════
+function renderReports(){
+  document.getElementById('rep-tbody').innerHTML=DB.assets.map((a,i)=>{
+    const last=DB.inspections.filter(x=>x.assetId===a.id).sort((x,y)=>y.date.localeCompare(x.date))[0];
+    return`<tr style="${i%2?'background:#fafafa':''}">
+      <td style="font-weight:800">${TI[a.type]} ${a.id}</td>
+      <td style="color:var(--dim)">${a.location}</td>
+      <td style="color:var(--muted)">${last?last.date:'—'}</td>
+      <td>${last?'👤 '+last.inspector:'—'}</td>
+      <td>${tagH(a.status)}</td></tr>`;
+  }).join('');
+  // Populate asset selector
+  const sel=document.getElementById('rep-asset-select');
+  if(sel)sel.innerHTML=DB.assets.map(a=>`<option value="${a.id}">${a.id} — ${a.location}</option>`).join('');
+}
+function csvDL(fn,rows){const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();}
+function exportCompliance(){csvDL('compliance.csv',['Asset ID,Type,Location,Subtype,Installed,Next Due,Status',...DB.assets.map(a=>`${a.id},${a.type},"${a.location}","${a.subtype||''}",${a.installed},${a.nextDue},${a.status}`)]);toast('📄 Downloaded!');}
+function exportInspections(){csvDL('inspections.csv',['ID,Asset,Date,Inspector,Role,Shift,Result,Remarks',...DB.inspections.map(i=>`${i.id},${i.assetId},${i.date},"${i.inspector}","${i.role||''}","${i.shift||''}",${i.skipped?'SKIPPED':i.passed?'PASS':'FAIL'},"${(i.remarks||'').replace(/"/g,"'")}"`)]);toast('📋 Downloaded!');}
+function exportOverdue(){const b=DB.assets.filter(a=>a.status!=='ok');csvDL('overdue.csv',['Asset ID,Type,Location,Next Due,Status',...b.map(a=>`${a.id},${a.type},"${a.location}",${a.nextDue},${a.status}`)]);toast(b.length===0?'All compliant!':'📋 Downloaded!');}
+function exportMaintenance(){csvDL('maintenance.csv',['ID,Asset,Type,Date,Next Service,By,Description,Cost',...(DB.maintenance||[]).map(m=>`${m.id},${m.assetId},"${MAINT_TYPE_LABELS[m.type]||m.type}",${m.date},${m.nextService||''},"${m.by}","${(m.desc||'').replace(/"/g,"'")}",${m.cost||0}`)]);toast('🔧 Downloaded!');}
+function printSummary(){
+  const rows=DB.assets.map((a,i)=>{const l=DB.inspections.filter(x=>x.assetId===a.id).sort((x,y)=>y.date.localeCompare(x.date))[0];return`<tr style="background:${i%2?'#f8f9fa':'#fff'}"><td>${a.id}</td><td>${TL[a.type]}</td><td>${a.location}</td><td>${l?l.date:'—'}</td><td>${l?l.inspector:'—'}</td><td style="color:${a.status==='ok'?'#16a34a':a.status==='due-soon'?'#d97706':'#dc2626'};font-weight:bold">${SLBL[a.status]}</td></tr>`;}).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Compliance</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th{background:#e53e1e;color:#fff;padding:8px;text-align:left;font-size:12px}td{padding:7px 8px;border-bottom:1px solid #eee;font-size:12px}</style></head><body><h2>🔥 ${S.brand||'FireSafe'} – Compliance Summary</h2><p style="font-size:12px;color:#888">Generated: ${new Date().toLocaleDateString()}</p><table><thead><tr><th>Asset ID</th><th>Type</th><th>Location</th><th>Last Inspection</th><th>Inspector</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+  w.document.close();w.print();
+}
+function printAssetReport(){
+  const id=document.getElementById('rep-asset-select').value;if(!id)return;
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  const hist=DB.inspections.filter(i=>i.assetId===id).slice(0,10);
+  const maint=(DB.maintenance||[]).filter(m=>m.assetId===id).slice(0,5);
+  const sc={ok:'#16a34a','due-soon':'#d97706',overdue:'#dc2626'};
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Asset Report – ${a.id}</title>
+  <style>body{font-family:Arial,sans-serif;padding:24px;color:#0f172a;max-width:800px}h1{font-size:22px;margin-bottom:2px}h2{font-size:15px;margin:20px 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:6px}
+  .badge{display:inline-block;padding:3px 12px;border-radius:20px;font-weight:800;font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f1f5f9;padding:7px 10px;text-align:left;color:#64748b}td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8}</style></head><body>
+  <h1>${aIcon(a)} Asset Report — ${a.id}</h1>
+  <div style="color:#64748b;font-size:12px;margin-bottom:16px">${aLabel(a)} · ${a.location}${a.subtype?' · '+a.subtype:''}</div>
+  <span class="badge" style="background:${a.status==='ok'?'#dcfce7':a.status==='due-soon'?'#fef9c3':'#fee2e2'};color:${sc[a.status]}">${SLBL[a.status]}</span>
+  <h2>Asset Details</h2>
+  <table><tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Asset ID</td><td>${a.id}</td></tr><tr><td>Type</td><td>${aLabel(a)}</td></tr>
+  <tr><td>Subtype</td><td>${a.subtype||'—'}</td></tr><tr><td>Location</td><td>${a.location}</td></tr>
+  <tr><td>Installation Date</td><td>${a.installed}</td></tr><tr><td>Next Inspection Due</td><td style="color:${sc[a.status]};font-weight:bold">${a.nextDue}</td></tr>
+  </table>
+  <h2>Inspection History (last 10)</h2>
+  ${hist.length===0?'<p style="color:#94a3b8;font-size:12px">No inspections recorded</p>':
+  `<table><tr><th>ID</th><th>Date</th><th>Inspector</th><th>Shift</th><th>Result</th><th>Remarks</th></tr>
+  ${hist.map(i=>`<tr><td>${i.id}</td><td>${i.date}</td><td>${i.inspector}</td><td>${i.shift||'—'}</td><td style="color:${i.skipped?'#6366f1':i.passed?'#16a34a':'#dc2626'};font-weight:bold">${i.skipped?'SKIPPED':i.passed?'PASS':'FAIL'}</td><td>${i.remarks||'—'}</td></tr>`).join('')}
+  </table>`}
+  <h2>Maintenance History (last 5)</h2>
+  ${maint.length===0?'<p style="color:#94a3b8;font-size:12px">No maintenance records</p>':
+  `<table><tr><th>ID</th><th>Date</th><th>Type</th><th>By</th><th>Cost</th><th>Description</th></tr>
+  ${maint.map(m=>`<tr><td>${m.id}</td><td>${m.date}</td><td>${MAINT_TYPE_LABELS[m.type]||m.type}</td><td>${m.by}</td><td>${m.cost?'₹'+m.cost:'—'}</td><td>${m.desc}</td></tr>`).join('')}
+  </table>`}
+  <div class="footer">Generated by ${S.brand||'FireSafe'} Portal · ${new Date().toLocaleString()} · ${S.company||''}</div>
+  </body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUDIT LOG
+// ═══════════════════════════════════════════════════════
+const ATI={login:{label:'Login',cls:'at-login',icon:'🔑'},logout:{label:'Logout',cls:'at-logout',icon:'⏏'},asset_add:{label:'Asset Added',cls:'at-add',icon:'➕'},asset_edit:{label:'Asset Edited',cls:'at-edit',icon:'✏️'},inspection:{label:'Inspection',cls:'at-insp',icon:'✅'},maintenance:{label:'Maintenance',cls:'at-maint',icon:'🔧'},admin:{label:'Admin',cls:'at-admin',icon:'🛡'}};
+function renderAuditPage(){
+  const q=(document.getElementById('audit-search')||{}).value.toLowerCase();
+  const tf=(document.getElementById('audit-type-filter')||{}).value;
+  let log=getAuditLog().filter(e=>(tf===''||e.type===tf)&&(q===''||e.userName.toLowerCase().includes(q)||e.detail.toLowerCase().includes(q)));
+  const tbody=document.getElementById('audit-tbody'),empty=document.getElementById('audit-empty');
+  if(!log.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=log.map((e,i)=>{
+    const ti=ATI[e.type]||{label:e.type,cls:'at-login',icon:'📌'};
+    const u=getUsers().find(x=>x.id===e.userId);
+    return`<tr style="${i%2?'background:#fafafa':''}">
+      <td style="color:var(--muted);font-size:.72rem">${log.length-i}</td>
+      <td style="font-size:.72rem;color:var(--muted);white-space:nowrap">${new Date(e.ts).toLocaleString()}</td>
+      <td><div style="font-weight:700;font-size:.78rem">${u?u.avatar:''} ${e.userName}</div><div style="font-size:.65rem;color:var(--muted)">${e.userId}</div></td>
+      <td><span style="font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:10px;background:${e.userRole==='admin'?'#fce7f3':e.userRole==='inspector'?'#dbeafe':'#f1f5f9'};color:${e.userRole==='admin'?'#be185d':e.userRole==='inspector'?'#1d4ed8':'#475569'}">${e.userRole}</span></td>
+      <td><span class="audit-tag ${ti.cls}">${ti.icon} ${ti.label}</span></td>
+      <td style="font-size:.78rem;color:var(--dim)">${e.detail||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+function clearAuditLog(){if(!confirm('Clear all audit entries?'))return;saveAuditLog([]);auditLog('admin','Audit log cleared');renderAuditPage();toast('Audit log cleared','warn');}
+function exportAuditLog(){const log=getAuditLog();csvDL('audit_log.csv',['#,Timestamp,User,Username,Role,Event,Details',...log.map((e,i)=>`${log.length-i},"${new Date(e.ts).toLocaleString()}","${e.userName}","${e.userId}","${e.userRole}","${e.type}","${(e.detail||'').replace(/"/g,"'")}"`)]); toast('📋 Exported!');}
+
+// ═══════════════════════════════════════════════════════
+//  USERS & ROLES MANAGEMENT
+// ═══════════════════════════════════════════════════════
+const PAGE_LABELS={dashboard:'📊 Dashboard',assets:'🗂️ Asset Registry',inspections:'✅ Inspections',log:'📒 Insp. Log',maintenance:'🔧 Maintenance',qrcodes:'🔲 QR Codes',reports:'📋 Reports',auditlog:'🔍 Audit Log',usermgmt:'👥 Users',settings:'⚙️ Settings'};
+
+function renderUserMgmt(){
+  const users=getUsers();const pw=loadPW();
+  document.getElementById('user-cards').innerHTML=users.map(u=>{
+    const lastSeen=getLastSeen(u.id);
+    const info=getAuditLog().find(e=>e.userId===u.id);
+    const isOnline=info&&(Date.now()-new Date(info.ts).getTime())<30*60*1000;
+    return`<div class="um-card">
+      <div class="um-head">
+        <div class="um-avatar" style="background:${u.bg||'#f1f5f9'};color:${u.color||'#475569'}">${u.avatar||'👤'}</div>
+        <div style="flex:1">
+          <div class="um-name">${u.name}</div>
+          <div class="um-user">@${u.username} · <strong>${u.role}</strong> · pw: <code style="font-size:.7rem;color:var(--dim)">${pw[u.id]||'—'}</code></div>
+          <div style="font-size:.68rem;color:var(--muted);margin-top:1px">Last seen: ${lastSeen} <span style="font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:10px;background:${isOnline?'#dcfce7':'#f1f5f9'};color:${isOnline?'#15803d':'#94a3b8'};margin-left:6px">${isOnline?'● Online':'○ Offline'}</span></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-blue btn-sm" onclick="editUser('${u.id}')">✏️ Edit</button>
+          ${u.id!=='admin'?`<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">🗑</button>`:''}
+        </div>
+      </div>
+      <div style="padding:11px 14px;background:#fafafa;border-top:1px solid var(--border)">
+        <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Page Permissions</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${ALL_PAGES.map(pg=>{
+            const has=(u.pages||[]).includes(pg);
+            return`<span style="font-size:.68rem;font-weight:700;padding:2px 9px;border-radius:20px;background:${has?'#dcfce7':'#f1f5f9'};color:${has?'#15803d':'#94a3b8'};border:1px solid ${has?'#bbf7d0':'#e2e8f0'}">${has?'✓':''} ${PAGE_LABELS[pg]||pg}</span>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let editUserId=null;
+function buildPermsGrid(existingPages=[]){
+  document.getElementById('um-perms-grid').innerHTML=ALL_PAGES.map(pg=>`
+    <label class="perm-toggle" style="cursor:pointer">
+      <input type="checkbox" id="perm-${pg}" ${existingPages.includes(pg)?'checked':''}/>
+      <label for="perm-${pg}" style="cursor:pointer">${PAGE_LABELS[pg]||pg}</label>
+    </label>`).join('');
+}
+function setPermsByRole(role){
+  const defaults={admin:ALL_PAGES,inspector:['dashboard','inspections','log','maintenance'],viewer:['dashboard']};
+  const pages=defaults[role]||['dashboard'];
+  ALL_PAGES.forEach(pg=>{const el=document.getElementById('perm-'+pg);if(el)el.checked=pages.includes(pg);});
+}
+function openAddUserModal(){
+  editUserId=null;
+  document.getElementById('user-modal-title').textContent='Add New User';
+  document.getElementById('user-modal-btn').textContent='Add User';
+  ['um-name','um-user','um-pass','um-avatar'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('um-role').value='inspector';
+  buildPermsGrid(['dashboard','inspections','log','maintenance']);
+  document.getElementById('user-modal').classList.add('open');
+}
+function editUser(id){
+  editUserId=id;
+  const users=getUsers();const u=users.find(x=>x.id===id);if(!u)return;
+  const pw=loadPW();
+  document.getElementById('user-modal-title').textContent='Edit User: '+u.name;
+  document.getElementById('user-modal-btn').textContent='Save Changes';
+  document.getElementById('um-name').value=u.name;
+  document.getElementById('um-user').value=u.username;
+  document.getElementById('um-pass').value=pw[u.id]||'';
+  document.getElementById('um-avatar').value=u.avatar||'';
+  document.getElementById('um-role').value=u.role;
+  buildPermsGrid(u.pages||[]);
+  document.getElementById('user-modal').classList.add('open');
+}
+function saveUser(){
+  const name=document.getElementById('um-name').value.trim();
+  const username=document.getElementById('um-user').value.trim().toLowerCase();
+  const pass=document.getElementById('um-pass').value;
+  const avatar=document.getElementById('um-avatar').value.trim()||'👤';
+  const role=document.getElementById('um-role').value;
+  if(!name||!username){toast('Name and username required','err');return;}
+  const pages=ALL_PAGES.filter(pg=>{const el=document.getElementById('perm-'+pg);return el&&el.checked;});
+  if(!pages.includes('dashboard'))pages.unshift('dashboard');
+
+  let users=getUsers();const pw=loadPW();
+  if(editUserId){
+    users=users.map(u=>u.id===editUserId?{...u,name,username,avatar,role,pages,bg:u.bg,color:u.color}:u);
+    if(pass&&pass.length>=6)pw[editUserId]=pass;
+    auditLog('admin',`Updated user: ${name} (@${username})`);toast('✅ User updated!');
+  }else{
+    if(users.find(u=>u.username===username)){toast('Username already exists','err');return;}
+    if(pass.length<6){toast('Password must be at least 6 characters','err');return;}
+    const id='usr-'+Date.now();
+    const colors=['#2563eb','#16a34a','#d97706','#6366f1','#be185d','#0891b2'];
+    const bgs=['#dbeafe','#dcfce7','#fef9c3','#e0e7ff','#fce7f3','#cffafe'];
+    const ci=users.length%colors.length;
+    users.push({id,username,name,role,avatar,pages,color:colors[ci],bg:bgs[ci]});
+    pw[id]=pass;
+    auditLog('admin',`Added user: ${name} (@${username}) — ${role}`);toast('✅ User added!');
+  }
+  saveUsers(users);savePW(pw);closeModal('user-modal');renderUserMgmt();
+}
+function deleteUser(id){
+  if(id==='admin'){toast('Cannot delete admin','err');return;}
+  const users=getUsers();const u=users.find(x=>x.id===id);
+  if(!confirm(`Delete user "${u?u.name:id}"?`))return;
+  saveUsers(users.filter(x=>x.id!==id));
+  auditLog('admin',`Deleted user: ${u?u.name:id}`);
+  renderUserMgmt();toast('User deleted','warn');
+}
+
+// ── Role change auto-fills permissions
+document.getElementById('um-role').addEventListener('change',function(){setPermsByRole(this.value);});
+
+// ═══════════════════════════════════════════════════════
+//  QR CODES
+// ═══════════════════════════════════════════════════════
+const URL_KEY='firesafe_portal_url_v7';
+function getPortalUrl(){return localStorage.getItem(URL_KEY)||'https://safety-seo.github.io/firesafe-portal/';}
+function savePortalUrl(){const v=document.getElementById('portal-url-input').value.trim().replace(/\/+$/,'');localStorage.setItem(URL_KEY,v);}
+function getAssetUrl(id){return getPortalUrl()+'?asset='+encodeURIComponent(id);}
+function initPortalUrlInput(){const el=document.getElementById('portal-url-input');if(el)el.value=getPortalUrl();}
+function makeQR(container,text,size){container.innerHTML='';return new QRCode(container,{text,width:size,height:size,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}
+
+let bulkFilter='all',selectedQRIds=new Set();
+function renderBulkQRPage(){initPortalUrlInput();renderBulkGrid();}
+function filterBulkQR(type,btn){bulkFilter=type;document.querySelectorAll('#page-qrcodes .filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderBulkGrid();}
+function renderBulkGrid(){
+  const assets=DB.assets.filter(a=>bulkFilter==='all'||a.type===bulkFilter);
+  const grid=document.getElementById('bulk-qr-grid');grid.innerHTML='';
+  assets.forEach(a=>{
+    const card=document.createElement('div');
+    card.className='bulk-card'+(selectedQRIds.has(a.id)?' bulk-sel':'');
+    card.id='bcard-'+a.id;card.onclick=()=>toggleQRSelect(a.id);
+    const sc={ok:'#15803d','due-soon':'#a16207',overdue:'#dc2626'};
+    const sb={ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+    card.innerHTML=`<div class="bc-qr" id="bqr-${a.id}"></div>
+      <div class="bc-id">${a.id}</div>
+      <div class="bc-type">${TI[a.type]} ${a.type==='generic'?(a.genericLabel||'Other Equipment'):TL[a.type]}${a.subtype?' · '+a.subtype:''}</div>
+      <div class="bc-loc">📍 ${a.location}</div>`;
+    grid.appendChild(card);
+    setTimeout(()=>{const t=document.getElementById('bqr-'+a.id);if(t){t.innerHTML='';makeQR(t,getAssetUrl(a.id),125);}},60);
+  });
+}
+function toggleQRSelect(id){if(selectedQRIds.has(id))selectedQRIds.delete(id);else selectedQRIds.add(id);const c=document.getElementById('bcard-'+id);if(c)c.classList.toggle('bulk-sel',selectedQRIds.has(id));}
+function selectAllQR(){DB.assets.filter(a=>bulkFilter==='all'||a.type===bulkFilter).forEach(a=>selectedQRIds.add(a.id));renderBulkGrid();}
+function clearSelQR(){selectedQRIds.clear();renderBulkGrid();}
+function regenerateAllQR(){savePortalUrl();renderBulkGrid();toast('✅ QR codes updated!');}
+
+let qrId=null;
+function openQR(id){
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;qrId=id;
+  document.getElementById('qr-modal-sub').textContent=`${aLabel(a)} · ${a.location}`;
+  const sc={ok:'#15803d','due-soon':'#a16207',overdue:'#dc2626'};
+  const sb={ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+  document.getElementById('qr-label-wrap').innerHTML=`<div class="ql-id">${a.id}</div><div class="ql-type">${TI[a.type]} ${a.type==='generic'?(a.genericLabel||'Other Equipment'):TL[a.type]}${a.subtype?' · '+a.subtype:''}</div><div class="ql-loc">📍 ${a.location}</div>`;
+  makeQR(document.getElementById('qr-canvas-wrap'),getAssetUrl(id),190);
+  document.getElementById('qr-modal').classList.add('open');
+}
+function closeQR(e){if(e&&e.target!==document.getElementById('qr-modal'))return;document.getElementById('qr-modal').classList.remove('open');qrId=null;}
+function downloadQRpng(){const canvas=document.getElementById('qr-canvas-wrap').querySelector('canvas');if(!canvas){toast('QR not ready','err');return;}const a=document.createElement('a');a.download=(qrId||'asset')+'-QR.png';a.href=canvas.toDataURL('image/png');a.click();toast('✅ Downloaded!');}
+function printOneQR(){
+  const a=DB.assets.find(x=>x.id===qrId);if(!a)return;
+  const canvas=document.getElementById('qr-canvas-wrap').querySelector('canvas');
+  const dataUrl=canvas?canvas.toDataURL('image/png'):'';
+  const sc={ok:'#15803d','due-soon':'#a16207',overdue:'#dc2626'};
+  const sb={ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>QR – ${a.id}</title><style>body{font-family:Arial;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.card{text-align:center;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 22px;display:inline-block}.id{font-family:monospace;font-size:15px;font-weight:800;margin-top:9px}.type{font-size:11px;color:#555;margin-top:2px}.loc{font-size:11px;color:#777}</style></head><body>
+  <div class="card"><img src="${dataUrl}" width="190" height="190"/>
+  <div class="id">${a.id}</div><div class="type">${TI[a.type]} ${a.type==='generic'?(a.genericLabel||'Other Equipment'):TL[a.type]}${a.subtype?' · '+a.subtype:''}</div>
+  <div class="loc">📍 ${a.location}</div></div></body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+function printBulkQR(){
+  const ids=selectedQRIds.size>0?[...selectedQRIds]:DB.assets.filter(a=>bulkFilter==='all'||a.type===bulkFilter).map(a=>a.id);
+  if(!ids.length){toast('Nothing to print','err');return;}
+  const sc={ok:'#15803d','due-soon':'#a16207',overdue:'#dc2626'};const sb={ok:'#dcfce7','due-soon':'#fef9c3',overdue:'#fee2e2'};
+  const cards=ids.map(id=>{
+    const a=DB.assets.find(x=>x.id===id);if(!a)return'';
+    const el=document.getElementById('bqr-'+id);
+    const canvas=el?el.querySelector('canvas'):null;
+    const dataUrl=canvas?canvas.toDataURL('image/png'):'';
+    return`<div class="card">${dataUrl?`<img src="${dataUrl}" width="140" height="140"/>`:''}<div class="id">${a.id}</div><div class="type">${TI[a.type]} ${a.type==='generic'?(a.genericLabel||'Other Equipment'):TL[a.type]}${a.subtype?' · '+a.subtype:''}</div><div class="loc">📍 ${a.location}</div></div>`;
+  }).filter(Boolean).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>QR Sheet</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial;padding:16px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}h1{font-size:14px;margin-bottom:12px;color:#e53e1e}.card{border:1.5px solid #e2e8f0;border-radius:9px;padding:11px 9px;text-align:center;page-break-inside:avoid}.id{font-family:monospace;font-size:12px;font-weight:800;margin-top:7px}.type{font-size:10px;color:#555;margin-top:2px}.loc{font-size:10px;color:#777}.s{display:inline-block;margin-top:4px;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px}</style></head><body>
+  <h1>🔥 ${S.brand||'FireSafe'} – QR Sheet · ${ids.length} assets · ${new Date().toLocaleDateString()}</h1>
+  <div class="grid">${cards}</div></body></html>`);
+  w.document.close();setTimeout(()=>w.print(),700);
+}
+async function downloadBulkZip(){
+  const ids=selectedQRIds.size>0?[...selectedQRIds]:DB.assets.filter(a=>bulkFilter==='all'||a.type===bulkFilter).map(a=>a.id);
+  if(!ids.length){toast('Nothing selected','err');return;}
+  for(const id of ids){const el=document.getElementById('bqr-'+id);const canvas=el?el.querySelector('canvas'):null;if(!canvas)continue;await new Promise(r=>setTimeout(r,80));const l=document.createElement('a');l.download=id+'-QR.png';l.href=canvas.toDataURL('image/png');l.click();}
+  toast(`✅ ${ids.length} QR PNGs downloaded!`);
+}
+
+// ═══════════════════════════════════════════════════════
+//  QR PUBLIC VIEW
+// ═══════════════════════════════════════════════════════
+function handleUrlParam(){
+  const params=new URLSearchParams(window.location.search);
+  const assetId=params.get('asset');
+  if(!assetId)return false;
+  const a=DB.assets.find(x=>x.id===assetId);if(!a)return false;
+  showPublicAssetView(a);return true;
+}
+function showPublicAssetView(a){
+  const ge=id=>document.getElementById(id);
+  // Header
+  const icon = a.type==='generic' ? (a.customFields&&a.customFields.find(f=>f.k==='Icon') ? a.customFields.find(f=>f.k==='Icon').v : '⚙️') : TI[a.type];
+  const label = a.type==='generic' ? (a.genericLabel||'Other Equipment') : TL[a.type];
+  ge('qpv-icon').textContent = icon;
+  ge('qpv-title').textContent = a.id;
+  ge('qpv-sub').textContent = `${label}${a.subtype?' · '+a.subtype:''}`;
+  // Core rows — no status badge
+  let rows = `
+    <div class="qpv-row"><span class="k">📍 Location</span><span class="v">${a.location}</span></div>
+    ${a.subtype?`<div class="qpv-row"><span class="k">🏷 Type / Capacity</span><span class="v">${a.subtype}</span></div>`:''}
+    ${a.installed?`<div class="qpv-row"><span class="k">📆 Installed</span><span class="v">${a.installed}</span></div>`:''}
+    ${a.nextDue?`<div class="qpv-row"><span class="k">📅 Next Inspection</span><span class="v">${a.nextDue}</span></div>`:''}`;
+  // Custom fields
+  if(a.customFields&&a.customFields.length){
+    rows += a.customFields.map(f=>`<div class="qpv-row"><span class="k">${f.k}</span><span class="v">${f.v}</span></div>`).join('');
+  }
+  ge('qpv-rows').innerHTML = rows;
+  // Recent inspections
+  const hist=DB.inspections.filter(i=>i.assetId===a.id).slice(0,3);
+  ge('qpv-inspections').innerHTML = hist.length===0
+    ? '<div style="color:var(--muted);font-size:.82rem">No inspections recorded yet</div>'
+    : hist.map(ins=>`<div class="qpv-insp">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-weight:700;font-size:.78rem">👤 ${ins.inspector}${ins.role?' · '+ins.role:''}</span>
+          ${passTag(ins.passed,ins.skipped)}
+        </div>
+        <div style="font-size:.72rem;color:var(--muted)">📅 ${ins.date} · ${ins.shift||'—'}</div>
+        ${ins.remarks?`<div style="font-size:.72rem;color:var(--dim);margin-top:2px">📝 ${ins.remarks}</div>`:''}
+      </div>`).join('');
+  ge('qr-public-view').classList.add('show');
+  ge('login-screen').classList.add('hidden');
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+function showLoadingScreen(msg='Connecting to database…'){
+  const el=document.getElementById('login-screen');
+  if(el){
+    const box=el.querySelector('.login-box');
+    if(box) box.innerHTML=`<div style="text-align:center;padding:40px 20px">
+      <div style="font-size:48px;margin-bottom:16px">🔥</div>
+      <div style="font-family:var(--font-head);font-size:1.4rem;font-weight:700;margin-bottom:8px">FireSafe Portal</div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:20px">${msg}</div>
+      <div style="display:flex;justify-content:center;gap:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--red);animation:dot1 1.2s infinite ease-in-out"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--red);animation:dot1 1.2s infinite ease-in-out .2s"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--red);animation:dot1 1.2s infinite ease-in-out .4s"></div>
+      </div>
+    </div>`;
+  }
+}
+
+// Load Firestore data into memory then start
+async function initFromFirestore(){
+  async function loadDoc(id){
+    try{ const s=await _db.doc('firesafe/'+id).get(); return s.exists?s.data():null; }
+    catch(e){ return null; }
+  }
+
+  const [assets, insp, maint, session, users, pw, settings, audit] = await Promise.all([
+    loadDoc('_assets'), loadDoc('_inspections'), loadDoc('_maintenance'),
+    loadDoc('_session'), loadDoc('_users'),      loadDoc('_passwords'),
+    loadDoc('_settings'), loadDoc('_audit'),
+  ]);
+
+  // Seed defaults on first run
+  const ddb = defaultDB();
+  if(!assets){ DB.assets=ddb.assets; await fbWriteAssets(); }       else DB.assets=assets.list||[];
+  if(!insp)  { DB.inspections=ddb.inspections; await fbWriteInspections(); } else DB.inspections=insp.list||[];
+  if(!maint) { DB.maintenance=ddb.maintenance; await fbWriteMaintenance(); } else DB.maintenance=maint.list||[];
+  DB.session = (session&&session.active) ? session : null;
+
+  if(!users){ await fbSaveUsers(DEFAULT_USERS); _usersCache=DEFAULT_USERS; } else _usersCache=users.list||DEFAULT_USERS;
+  if(!pw)   { await fbSavePW({...DEFAULT_PW});  _pwCache={...DEFAULT_PW};  } else _pwCache=Object.assign({...DEFAULT_PW},pw);
+  if(settings&&Object.keys(settings).length){ Object.assign(S,settings); }
+  _auditCache = audit?(audit.list||[]):[];
+
+  return true;
+}
+
+(function init(){
+  S=getSettings();
+  applySettings();
+  document.getElementById('sidebar').style.display='none';
+  document.getElementById('main').style.display='none';
+  document.getElementById('login-screen').classList.remove('hidden');
+  showLoadingScreen('Connecting to database…');
+
+  // Wait for Firebase module to signal ready
+  function startApp(){
+    initFromFirestore().then(()=>{
+      // Restore login box HTML
+      const el=document.getElementById('login-screen');
+      if(el) el.innerHTML=`<div class="login-box">
+    <div class="login-logo">
+      <h1>🔥 <span id="login-title-brand">Fire</span><span id="login-title-safe">Safe</span></h1>
+      <p id="login-company-sub">Safety Equipment Management Portal</p>
+    </div>
+    <div id="login-panel">
+      <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:3px">Sign In</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:14px">Enter your credentials to access the portal</div>
+      <div class="login-err" id="login-err">Incorrect username or password.</div>
+      <div class="form-grid" style="gap:10px;margin-bottom:14px">
+        <div class="form-group"><label>Username</label><input class="form-input" id="login-user" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+        <div class="form-group"><label>Password</label><input class="form-input" type="password" id="login-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      </div>
+      <button class="btn btn-red btn-full" onclick="doLogin()">Sign In →</button>
+      <div style="text-align:center;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="showForgotPanel()" style="font-size:.72rem">Forgot / Reset Password</button>
+      </div>
+    </div>
+    <div id="reset-panel" style="display:none">
+      <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:3px">Reset Password</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:14px">Admin credentials required to reset any user's password</div>
+      <div class="login-err" id="reset-err"></div>
+      <div class="login-succ" id="reset-succ"></div>
+      <div class="form-grid" style="gap:9px;margin-bottom:14px">
+        <div class="form-group"><label>Admin Username</label><input class="form-input" id="ra-user" placeholder="admin username"/></div>
+        <div class="form-group"><label>Admin Password</label><input class="form-input" type="password" id="ra-pass" placeholder="admin password"/></div>
+        <div class="form-group"><label>User to Reset</label><select class="form-input" id="rt-user"><option value="">— Select user —</option></select></div>
+        <div class="form-group"><label>New Password</label><input class="form-input" type="password" id="rn-pass" placeholder="min 6 characters"/></div>
+        <div class="form-group"><label>Confirm Password</label><input class="form-input" type="password" id="rc-pass" placeholder="repeat new password"/></div>
+      </div>
+      <div style="display:flex;gap:9px">
+        <button class="btn btn-ghost" style="flex:1" onclick="showLoginPanel()">← Back</button>
+        <button class="btn btn-red" style="flex:1" onclick="doResetPassword()">Reset Password</button>
+      </div>
+    </div>
+  </div>`;
+      applySettings();
+      // Check persisted session
+      if(!handleUrlParam()){
+        if(checkPersistedSession()){ showPortal(); }
+        // else login screen is already visible
+      }
+    }).catch(err=>{
+      console.error('Firebase init error',err);
+      showLoadingScreen('⚠️ Could not connect to database. Check your internet connection.');
+    });
+  }
+
+  // Firebase compat loads synchronously, always ready
+  startApp();
+})();
+</script>
+</body>
+</html>
